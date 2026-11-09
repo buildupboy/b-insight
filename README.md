@@ -20,20 +20,22 @@ b-insight/
 
 ## 실행
 
+의존성 설치:
+
+```bash
+npm install
+```
+
 프런트엔드 개발 서버:
 
 ```bash
-cd frontend
-npm install
 npm run dev
 ```
 
 프로덕션 빌드 후 백엔드 서버 실행:
 
 ```bash
-cd frontend
 npm run build
-cd ../backend
 npm start
 ```
 
