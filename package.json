@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "vite frontend",
+    "dev": "node --watch --env-file=.env backend/server.js",
     "build": "vite build frontend",
-    "start": "node backend/server.js"
+    "test": "node --test backend/*.test.js",
+    "diagnose:data": "node --env-file=.env backend/diagnose.js",
+    "start": "node --env-file=.env backend/server.js"
   },
   "dependencies": {
     "react": "^19.2.0",
