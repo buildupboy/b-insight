@@ -64,4 +64,8 @@ test('stale history is reported with the actual latest 12-month period instead o
   assert.equal(result.period.to,'2023-05-20');
   assert.equal(result.openings,1);
   assert.equal(result.closures,1);
+  assert.equal(result.monthly.length,13);
+  assert.deepEqual(result.monthly.find(row=>row.month==='2022-08'),{month:'2022-08',openings:1,closures:0});
+  assert.deepEqual(result.monthly.at(-1),{month:'2023-05',openings:0,closures:1});
+  assert.equal(result.monthly.reduce((sum,row)=>sum+row.openings+row.closures,0),2);
 });

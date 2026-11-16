@@ -24,7 +24,7 @@ globalThis.fetch=async(input,options)=>{
   if(route.endsWith('/storeZoneInAdmi')) return wrap(zones);
   if(route.endsWith('/smallUpjongList')) return wrap([{indsSclsCd:'I21201',indsSclsNm:'카페'}]);
   if(route.endsWith('/largeUpjongList')) return wrap([{indsLclsCd:'I2',indsLclsNm:'음식점'}]);
-  if(route.endsWith('/getCommercialChangeList')) return wrap(zones.map((zone,i)=>({comm_nm:zone.mainTrarNm,average_open_months:30+i*4})));
+  if(route.endsWith('/getCommercialChangeList')) return wrap(zones.map((zone,i)=>({comm_nm:zone.mainTrarNm,average_open_months:30+i*4,average_close_months:24,busan_average_open_months:28,change_indicator_nm:'확장'})));
   if(route.endsWith('/getCommercialHistoryList')) return wrap([]);
   if(route.endsWith('/storeListInArea')||route.endsWith('/storeListInDong')) {
     const code=route.endsWith('/storeListInArea')?dongFor(url.searchParams.get('key')):url.searchParams.get('key');
@@ -41,6 +41,7 @@ test('서면 카페를 코드 입력 없이 행정동 2곳으로 비교하고 �
   assert.deepEqual(result.results.map(r=>r.id).sort(),['26230100','26230101']);
   assert(result.results.every(r=>r.score!==null&&r.name.startsWith('부산진구 ')));
   assert.deepEqual(result.results.map(r=>r.metrics.survivalContext).sort(),[30,34]);
+  assert.ok(result.results.every(r=>r.changeContext.citySurvival===28&&r.changeContext.averageClosed===24&&r.changeContext.status==='확장'));
   assert(result.results.every(r=>r.metrics.stability===r.metrics.survivalContext));
   assert(result.results.every(r=>(r.metrics.openings===0&&r.metrics.closures===0)||(r.metrics.openings===null&&r.metrics.closures===null)));
 });

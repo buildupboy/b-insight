@@ -7,6 +7,20 @@ import { zones, stores, dongStores, discoverDongs, administrativeDongs, industry
 import { resolveRegion, resolveIndustry } from './resolve.js';
 import { makeCandidate, rank } from './score.js';
 
+async function mapLimit(items, limit, worker) {
+  const results = new Array(items.length);
+  let next = 0;
+  async function run() {
+    while (true) {
+      const index = next++;
+      if (index >= items.length) return;
+      results[index] = await worker(items[index], index);
+    }
+  }
+  await Promise.all(Array.from({length:Math.min(limit,items.length)},run));
+  return results;
+}
+
 const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'frontend', 'dist');
 const types = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png' };
 const json = (response, status, value) => { response.writeHead(status, {'Content-Type':'application/json; charset=utf-8'}); response.end(JSON.stringify(value)); };
@@ -30,15 +44,7 @@ function isHistoryIndustry(row,wanted) {
   const categories=[row.upjongnm,row.minornm,row.majornm].map(compact).filter(Boolean);
   return categories.some(c=>[...wanted].some(w=>c===w||(w.length>=2&&c.includes(w))||(w.length>=3&&w.includes(c))));
 }
-function latestIndustryEventDate(rows,industry,conditions) {
-  const wanted=historyIndustryTerms(industry,conditions); let latest=null;
-  for(const row of rows) {
-    if(!isHistoryIndustry(row,wanted)) continue;
-    for(const value of [row.apvpermymd,row.dcbymd]) { const date=parseEventDate(value); if(date&&(!latest||date>latest)) latest=date; }
-  }
-  return latest;
-}
-export function historyMetrics(result,dong,industry,conditions,storeRows,coverageDate=null) {
+export function historyMetrics(result,dong,industry,conditions,storeRows) {
   if(result.truncated||result.total===null||result.rawCount<result.total) return {verified:false,reason:'\uC774\uB825 \uC804\uCCB4 \uC870\uD68C \uBBF8\uC644\uB8CC ('+result.rawCount+'/'+(result.total??'\uC804\uCCB4 \uAC74\uC218 \uBBF8\uD655\uC778')+')'};
   const wanted=historyIndustryTerms(industry,conditions);
   const addressKey=value=>compact(value).replace(/\uBD80\uC0B0\uAD11\uC5ED\uC2DC|\uBD80\uC0B0\uC2DC|\uBD80\uC0B0/g,'').replaceAll(compact(dong.signguNm),'');
@@ -76,6 +82,11 @@ export function historyMetrics(result,dong,industry,conditions,storeRows,coverag
   const periodEnd=latest, periodStart=requestedStart;
   const currentWindowStart=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()-conditions.months,now.getUTCDate()));
   const stale=latest<currentWindowStart;
+  const monthly=new Map();
+  for (const month=new Date(Date.UTC(periodStart.getUTCFullYear(),periodStart.getUTCMonth(),1)); month<=periodEnd; month.setUTCMonth(month.getUTCMonth()+1)) {
+    const key=month.toISOString().slice(0,7);
+    monthly.set(key,{month:key,openings:0,closures:0});
+  }
   const seen=new Set(); let openings=0,closures=0,matched=0,addressMatched=rowsInDong.length; const tenures=[];
   for(const row of matchedRows){
     matched++;
@@ -83,14 +94,18 @@ export function historyMetrics(result,dong,industry,conditions,storeRows,coverag
     const opened=parseEventDate(row.apvpermymd), closed=parseEventDate(row.dcbymd);
     const key=[compact(row.bplcnm),address,...categories,opened?.toISOString()||'',closed?.toISOString()||''].join('|');
     if(seen.has(key)) continue; seen.add(key);
-    if(opened&&opened>=periodStart&&opened<=periodEnd) openings++;
-    if(closed&&closed>=periodStart&&closed<=periodEnd) closures++;
+    if(opened&&opened>=periodStart&&opened<=periodEnd) { openings++; monthly.get(opened.toISOString().slice(0,7)).openings++; }
+    if(closed&&closed>=periodStart&&closed<=periodEnd) { closures++; monthly.get(closed.toISOString().slice(0,7)).closures++; }
     if(opened&&closed&&closed>=opened) tenures.push((closed-opened)/(1000*60*60*24*30.4375));
   }
   if(result.rawCount&&matched===0) {
     return {verified:false,reason:'\uC774\uB825 '+result.rawCount.toLocaleString('ko-KR')+'\uAC74 \uC911 \uD589\uC815\uB3D9 \uC8FC\uC18C \uC77C\uCE58 '+addressMatched.toLocaleString('ko-KR')+'\uAC74, \uC801\uC6A9 \uC5C5\uC885 \uBD84\uB958\uC758 \uC720\uD6A8 \uC774\uB825\uC740 0\uAC74'};
   }
-  return {verified:true,truncated:false,openings,closures,closedTenureMonths:tenures.length?Math.round(tenures.reduce((a,b)=>a+b,0)/tenures.length):null,matchedRows:matched,categoryScope,period:{from:periodStart.toISOString().slice(0,10),to:periodEnd.toISOString().slice(0,10),stale,latestObserved:latest.toISOString().slice(0,10)},fields:['rdnwhladdr','upjongnm','minornm','majornm','apvpermymd','dcbymd']};
+  return {verified:true,truncated:false,openings,closures,monthly:[...monthly.values()],closedTenureMonths:tenures.length?Math.round(tenures.reduce((a,b)=>a+b,0)/tenures.length):null,matchedRows:matched,categoryScope,period:{from:periodStart.toISOString().slice(0,10),to:periodEnd.toISOString().slice(0,10),stale,latestObserved:latest.toISOString().slice(0,10)},fields:['rdnwhladdr','upjongnm','minornm','majornm','apvpermymd','dcbymd']};
+}
+function reportedMonths(rows, field) {
+  const values=[...new Set(rows.map(row=>Number(row[field])).filter(value=>Number.isFinite(value)&&value>0&&value<=1200))];
+  return values.length===1?values[0]:null;
 }
 async function readBody(request) {
   let value = '';
@@ -110,9 +125,12 @@ export async function analyze(input) {
     if (!(error instanceof InputError)) throw error;
     industry = resolveIndustry(conditions.industry, small.rows, (await industryCodes('large')).rows);
   }
+  // Start independent Busan feeds while commercial areas are being resolved.
+  const changeLoad=changes().then(value=>({value}),error=>({error}));
+  const historyLoad=history().then(value=>({value}),error=>({error}));
   const dongs = new Map();
   const zoneDongCodes = new Map();
-  for (const zone of region.zones.slice(0, 10)) {
+  await mapLimit(region.zones.slice(0, 10), 3, async zone => {
     if (/^26\d{6}(?:\d{2})?$/.test(String(zone.adongCd)))
       dongs.set(String(zone.adongCd), { adongCd:String(zone.adongCd), adongNm:null, signguNm:zone.signguNm, signguCd:String(zone.signguCd) });
     if (/^26\d{6}(?:\d{2})?$/.test(String(zone.adongCd))) zoneDongCodes.set(String(zone.trarNo),new Set([String(zone.adongCd)]));
@@ -123,7 +141,7 @@ export async function analyze(input) {
           { dongs.set(String(row.adongCd), { adongCd:String(row.adongCd), adongNm:row.adongNm || dongs.get(String(row.adongCd))?.adongNm || null, signguNm:row.signguNm || zone.signguNm, signguCd:String(zone.signguCd) }); const codes=zoneDongCodes.get(String(zone.trarNo))||new Set(); codes.add(String(row.adongCd)); zoneDongCodes.set(String(zone.trarNo),codes); }
       }
     } catch (error) { warnings.push(error instanceof DataApiError ? error.message : '행정동 후보 확인 실패'); }
-  }
+  });
   if (dongs.size < 2) {
     const districtCodes=[...new Set(region.zones.map(z=>String(z.signguCd)).filter(code=>/^26\d{3}$/.test(code)))];
     for (const code of districtCodes.slice(0, 2)) {
@@ -147,9 +165,28 @@ export async function analyze(input) {
   }
   if (region.zones.length > 10) warnings.push('관련 상권 10곳에서 확인된 행정동만 비교했습니다.');
   if (dongs.size > 12) warnings.push('먼저 확인된 행정동 12곳만 비교했습니다.');
-  const survivalByDong = new Map();
-  try {
-    const change=await changes();
+  const storeData = await mapLimit([...dongs.values()].slice(0, 12), 3, async dong => {
+    let all={rows:[],truncated:true}, filtered={rows:[],truncated:true};
+    const [allResult,filteredResult]=await Promise.allSettled([dongStores(dong.adongCd),dongStores(dong.adongCd,industry.filter)]);
+    if(allResult.status==='fulfilled') all=allResult.value;
+    else warnings.push(allResult.reason instanceof DataApiError ? allResult.reason.message : dong.signguNm+' '+dong.adongNm+' 전체 점포 조회 실패');
+    if(filteredResult.status==='fulfilled') filtered=filteredResult.value;
+    else warnings.push(filteredResult.reason instanceof DataApiError ? filteredResult.reason.message : dong.signguNm+' '+dong.adongNm+' 선택 업종 조회 실패');
+    return {dong,all,filtered};
+  });
+  // Give supplementary feeds a short grace period once the candidate data is ready.
+  let metricsTimer;
+  const metricsDeadline = new Promise(resolve => { metricsTimer = setTimeout(resolve, 5000, null); });
+  const [loadedChange,loadedHistory] = await Promise.all([
+    Promise.race([changeLoad,metricsDeadline]),
+    Promise.race([historyLoad,metricsDeadline]),
+  ]);
+  clearTimeout(metricsTimer);
+  const changeByDong = new Map();
+  if (!loadedChange) warnings.push('부산 변화지표 응답이 늦어 해당 자료의 생존기간을 표시하지 않습니다.');
+  else try {
+    if(loadedChange.error) throw loadedChange.error;
+    const change=loadedChange.value;
     if (!change.truncated || (change.total !== null && change.rawCount >= change.total)) {
       const zoneNames=new Map(), changeNames=new Map();
       const compact=value=>String(value||'').replace(/\s|_/g,'');
@@ -160,40 +197,51 @@ export async function analyze(input) {
         const matched=changeNames.get(name);
         const dongCodes=zoneDongCodes.get(String(items[0].trarNo)) || new Set(items[0].adongCd?[String(items[0].adongCd)]:[]);
         if (items.length!==1 || !dongCodes.size || [...dongCodes].some(code=>!/^26\d{6}(?:\d{2})?$/.test(code)) || !matched?.length) continue;
-        const monthsValues=[...new Set(matched.map(row=>row.average_open_months).filter(v=>v!==null&&v!==undefined&&v!=='').map(Number).filter(v=>Number.isFinite(v)&&v>0&&v<=1200))];
-        if (monthsValues.length!==1) continue;
-        for (const dongCode of dongCodes) values.set(dongCode,[...(values.get(dongCode)||[]),monthsValues[0]]);
+        const statuses=[...new Set(matched.map(row=>String(row.change_indicator_nm??'').trim()).filter(Boolean))];
+        const indicators={
+          survival:reportedMonths(matched,'average_open_months'),
+          citySurvival:reportedMonths(matched,'busan_average_open_months'),
+          averageClosed:reportedMonths(matched,'average_close_months'),
+          status:statuses.length===1?statuses[0]:null,
+        };
+        for (const dongCode of dongCodes) values.set(dongCode,[...(values.get(dongCode)||[]),indicators]);
       }
-      for (const [code,months] of values) survivalByDong.set(code,Math.round(months.reduce((a,b)=>a+b,0)/months.length));
+      for (const [code,indicators] of values) {
+        const average=field=>{
+          const months=indicators.map(item=>item[field]).filter(Number.isFinite);
+          return months.length?Math.round(months.reduce((a,b)=>a+b,0)/months.length):null;
+        };
+        const statuses=[...new Set(indicators.map(item=>item.status))];
+        changeByDong.set(code,{survival:average('survival'),averageClosed:average('averageClosed'),
+          citySurvival:reportedMonths(indicators,'citySurvival'),status:statuses.length===1?statuses[0]:null});
+      }
     } else warnings.push('부산 변화지표 일부 페이지를 확인하지 못해 생존기간 참고값을 제외했습니다.');
   } catch(error) { warnings.push(error instanceof DataApiError ? error.message : '부산 변화지표 조회 실패'); }
-  let historyData=null, historyCoverage=null;
-  try {
-    historyData=await history();
-    if(!historyData.truncated) historyCoverage=latestIndustryEventDate(historyData.rows,industry,conditions);
+  let historyData=null;
+  if (!loadedHistory) warnings.push('부산 점포이력 응답이 늦어 개업·폐업 수치를 표시하지 않습니다.');
+  else try {
+    if(loadedHistory.error) throw loadedHistory.error;
+    historyData=loadedHistory.value;
     if(historyData.truncated) warnings.push(`부산 점포이력 전체 자료 조회가 미완료라 개업·폐업 수치는 표시하지 않습니다 (${historyData.rawCount}/${historyData.total??'전체 건수 확인 불가'}).`);
     if(historyData.stale) warnings.push(`새 점포이력 조회 실패로 저장된 이전 자료(${new Date(historyData.cachedAt).toLocaleDateString('ko-KR')})를 사용합니다.`);
   } catch(error) { warnings.push(error instanceof DataApiError ? error.message : '부산 점포이력 전체 자료 조회 실패'); }
   const candidates = [];
-  for (const dong of [...dongs.values()].slice(0, 12)) {
-    let all={rows:[],truncated:true}, filtered={rows:[],truncated:true};
-    try { all=await dongStores(dong.adongCd); }
-    catch (error) { warnings.push(error instanceof DataApiError ? error.message : dong.signguNm+' '+dong.adongNm+' 전체 점포 조회 실패'); }
-    try { filtered=await dongStores(dong.adongCd,industry.filter); }
-    catch (error) { warnings.push(error instanceof DataApiError ? error.message : dong.signguNm+' '+dong.adongNm+' 선택 업종 조회 실패'); }
+  for (const {dong,all,filtered} of storeData) {
     const names=[...new Set(all.rows.map(r=>r.adongNm).filter(Boolean))];
     if (!dong.adongNm && names.length === 1) dong.adongNm=names[0];
     if (!dong.adongNm) { warnings.push(dong.signguNm+' 행정동 이름을 확인할 수 없어 해당 후보를 제외했습니다.'); continue; }
     let events=null;
-    try {
-      if(!historyData) throw new Error('history unavailable');
-      const mapped=historyMetrics(historyData,dong,industry,conditions,all.rows,historyCoverage);
+    if(historyData) try {
+      const mapped=historyMetrics(historyData,dong,industry,conditions,all.rows);
       events=mapped;
       if(!mapped.verified) warnings.push(`${dong.signguNm} ${dong.adongNm}: ${mapped.reason}`);
       else if(mapped.period?.stale) warnings.push(`점포이력 최신 관측일은 ${mapped.period.latestObserved}입니다. 개업·폐업은 제공 자료의 최근 ${conditions.months}개월(${mapped.period.from}~${mapped.period.to}) 기준으로 표시합니다.`);
     } catch(error) { events={verified:false,reason:error instanceof DataApiError?error.message:'history fetch failed'}; warnings.push(`${dong.signguNm} ${dong.adongNm}: ${events.reason}`); }
-    const survival=survivalByDong.get(dong.adongCd)??events?.closedTenureMonths??null;
-    candidates.push(makeCandidate(dong,all,filtered,industry,events,survival));
+    const change=changeByDong.get(dong.adongCd);
+    const survival=change?.survival??events?.closedTenureMonths??null;
+    const candidate=makeCandidate(dong,all,filtered,industry,events,survival);
+    candidate.changeContext=change??null;
+    candidates.push(candidate);
   }
   return { conditions, resolvedRegion:region.label, matchedIndustry:industry.label, industryCode:industry.filter,
     results:rank(candidates,conditions), warnings:[...new Set(warnings)],
