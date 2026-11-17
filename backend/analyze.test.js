@@ -1,67 +1,106 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {Readable} from 'node:stream';
-process.env.NODE_ENV='test';
-process.env.OPENAI_API_KEY='fixture-openai';
-process.env.DATA_GO_KR_SERVICE_KEY='fixture-public';
-const {analyze,server}=await import('./server.js');
-const zones=[
-  {trarNo:'101',mainTrarNm:'서면 중앙',ctprvnCd:'26',signguCd:'26230',signguNm:'부산진구',adongCd:'26230100'},
-  {trarNo:'102',mainTrarNm:'서면 거리',ctprvnCd:'26',signguCd:'26230',signguNm:'부산진구',adongCd:'26230101'},
-  {trarNo:'103',mainTrarNm:'해운대 해변',ctprvnCd:'26',signguCd:'26350',signguNm:'해운대구',adongCd:'26350100'},
-  {trarNo:'104',mainTrarNm:'해운대 역',ctprvnCd:'26',signguCd:'26350',signguNm:'해운대구',adongCd:'26350101'}
+import { Readable } from 'node:stream';
+process.env.NODE_ENV = 'test';
+process.env.OPENAI_API_KEY = 'fixture-openai';
+const { analyze, server } = await import('./server.js');
+const { RecommendationDbError } = await import('./recommendation-db.js');
+
+const areas = [
+  { district_name:'부산진구', dong_name:'부전1동', total:100 },
+  { district_name:'부산진구', dong_name:'부전2동', total:200 },
+  { district_name:'해운대구', dong_name:'우1동', total:150 },
 ];
-const dongFor=zone=>zone==='101'?'26230100':zone==='102'?'26230101':zone==='103'?'26350100':'26350101';
-const nameFor=code=>({'26230100':'부전1동','26230101':'부전2동','26350100':'우1동','26350101':'우2동'})[code];
-const wrap=(rows,total=rows.length)=>new Response(JSON.stringify({response:{header:{resultCode:'00'},body:{items:{item:rows},totalCount:total}}}),{status:200});
-globalThis.fetch=async(input,options)=>{
-  const url=new URL(input),route=url.pathname;
-  if(url.hostname==='api.openai.com') {
-    assert.equal(options.headers.Authorization,'Bearer fixture-openai');
-    const prompt=JSON.parse(options.body).messages[1].content;
-    return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify({industry:prompt.includes('카페')?'카페':'음식점',region:prompt.includes('서면')?'서면':'해운대',months:12,competition:'low',stability:'important',growth:'normal',budget:null})}}]}));
-  }
-  if(route.endsWith('/storeZoneInAdmi')) return wrap(zones);
-  if(route.endsWith('/smallUpjongList')) return wrap([{indsSclsCd:'I21201',indsSclsNm:'카페'}]);
-  if(route.endsWith('/largeUpjongList')) return wrap([{indsLclsCd:'I2',indsLclsNm:'음식점'}]);
-  if(route.endsWith('/getCommercialChangeList')) return wrap(zones.map((zone,i)=>({comm_nm:zone.mainTrarNm,average_open_months:30+i*4,average_close_months:24,busan_average_open_months:28,change_indicator_nm:'확장'})));
-  if(route.endsWith('/getCommercialHistoryList')) return wrap([]);
-  if(route.endsWith('/storeListInArea')||route.endsWith('/storeListInDong')) {
-    const code=route.endsWith('/storeListInArea')?dongFor(url.searchParams.get('key')):url.searchParams.get('key');
-    assert(code);
-    const size=code.endsWith('00')?10:20;
-    const filtered=url.searchParams.has('indsSclsCd')||url.searchParams.has('indsLclsCd');
-    const rows=Array.from({length:size},(_,i)=>({bizesId:code+'-'+i,adongCd:code,adongNm:nameFor(code),signguCd:code.slice(0,5),signguNm:code.startsWith('26230')?'부산진구':'해운대구',indsSclsCd:i<size/4?'I21201':'I29999',indsLclsCd:'I2',stdrYm:'202601'}));
-    return wrap(filtered&&url.searchParams.has('indsSclsCd')?rows.filter(r=>r.indsSclsCd==='I21201'):rows);
-  }
-  throw new Error('unexpected fixture operation');
+const repository = {
+  async loadRecommendationData() {
+    return { coverage:{total:450,unmapped:0}, areas,
+      industries:[{industry_code:'I21201',industry_name:'카페'},{industry_code:'S20701',industry_name:'미용실'}] };
+  },
+  async loadIndustryCounts(code, selectedAreas) {
+    assert.deepEqual(code, ['I21201']);
+    return selectedAreas.map(area => ({...area, selected:area.dong_name==='부전1동'?10:area.dong_name==='부전2동'?30:30}));
+  },
+  async loadAreaContexts(selectedAreas) {
+    return {history:new Map(),markets:new Map(),historyQueryMs:0,changeQueryMs:0};
+  },
 };
-test('서면 카페를 코드 입력 없이 행정동 2곳으로 비교하고 점수를 표시한다',async()=>{
-  const result=await analyze({prompt:'부산 서면에서 카페를 열고 싶어요. 경쟁이 낮고 안정적인 곳을 추천해줘.'});
-  assert.deepEqual(result.results.map(r=>r.id).sort(),['26230100','26230101']);
-  assert(result.results.every(r=>r.score!==null&&r.name.startsWith('부산진구 ')));
-  assert.deepEqual(result.results.map(r=>r.metrics.survivalContext).sort(),[30,34]);
-  assert.ok(result.results.every(r=>r.changeContext.citySurvival===28&&r.changeContext.averageClosed===24&&r.changeContext.status==='확장'));
-  assert(result.results.every(r=>r.metrics.stability===r.metrics.survivalContext));
-  assert(result.results.every(r=>(r.metrics.openings===0&&r.metrics.closures===0)||(r.metrics.openings===null&&r.metrics.closures===null)));
+const conditions = {industry:'카페',region:'부산진구',months:12,competition:'low',stability:'important',growth:'normal',budget:null};
+
+test('DB 집계로 기존 응답 구조를 유지하며 공공 API를 호출하지 않는다', async () => {
+  const oldFetch = globalThis.fetch;
+  globalThis.fetch = () => { throw new Error('unexpected external API request'); };
+  try {
+    const result = await analyze({prompt:'카페',conditions}, repository);
+    assert.equal(result.results.length, 2);
+    assert.deepEqual(result.results.map(row => row.name).sort(), ['부산진구 부전1동','부산진구 부전2동']);
+    assert(result.results.every(row => row.score !== null && row.scores.stability === null && row.scores.growth === null));
+    assert(result.results.every(row => row.metrics.openings === null && row.metrics.survivalContext === null));
+    assert.deepEqual(result.results.map(row => row.metrics.industryStores).sort((a,b)=>a-b), [10,30]);
+    assert.deepEqual(Object.keys(result).sort(), ['analyzedAt','conditions','industryCode','matchedIndustry','resolvedRegion','results','sources','timing','warnings']);
+    assert(result.sources[0].includes('public.stores'));
+  } finally { globalThis.fetch = oldFetch; }
 });
-test('해운대 음식점도 행정동으로만 반환한다',async()=>{
-  const result=await analyze({prompt:'해운대에서 음식점 창업을 고민 중이야. 최근 12개월 변화를 반영해줘.'});
-  assert.deepEqual(result.results.map(r=>r.id).sort(),['26350100','26350101']);
+
+test('구·행정동 필터링과 업종 코드 필터링', async () => {
+  const result = await analyze({prompt:'카페',conditions:{...conditions,region:'해운대구 우1동'}}, repository);
+  assert.equal(result.results.length, 1);
+  assert.equal(result.results[0].name, '해운대구 우1동');
+  assert.equal(result.results[0].metrics.totalStores, 150);
+  assert.equal(result.results[0].metrics.industryStores, 30);
+  await assert.rejects(() => analyze({prompt:'카페',conditions:{...conditions,region:'서면'}}, repository), /확인된 별칭에 연결되지/);
 });
-test('모호한 지역은 지명 선택지를 반환한다',async()=>{
-  await assert.rejects(()=>analyze({prompt:'x',conditions:{industry:'카페',region:'없는 지역'}}),error=>error.choices.includes('부산진구'));
+
+test('DB 연결 실패를 추천 실패로 전파한다', async () => {
+  await assert.rejects(() => analyze({prompt:'카페',conditions}, {
+    ...repository, loadRecommendationData:async () => { throw new RecommendationDbError('DB 연결 실패'); },
+  }), /DB 연결 실패/);
 });
-function dispatch(url,method='GET',data) {
-  return new Promise(resolve=>{
-    const req=Readable.from(data?[JSON.stringify(data)]:[]);req.url=url;req.method=method;
-    const response={status:0,headers:{},writeHead(status,headers={}){this.status=status;this.headers=headers;return this;},end(content=''){resolve({status:this.status,content:String(content),headers:this.headers});return this;}};
+
+test('이력 평균은 응답에만 붙고 기존 점수·정렬을 바꾸지 않는다', async () => {
+  const input={prompt:'카페',conditions};
+  const baseline=await analyze(input,repository);
+  const enriched=await analyze(input,{
+    ...repository,
+    loadAreaContexts:async selectedAreas=>({
+      history:new Map(selectedAreas.map(area=>[`${area.district_name}\0${area.dong_name}`,
+        {scope:'행정동 전체 업종',averageOperatingMonths:42.5,validSample:3,permitRecords:7,closureRecords:5}])),
+      markets:new Map(),historyQueryMs:4,changeQueryMs:2
+    })
+  });
+  assert.deepEqual(enriched.results.map(row=>[row.name,row.score,row.scores,row.effectiveWeights]),
+    baseline.results.map(row=>[row.name,row.score,row.scores,row.effectiveWeights]));
+  assert(enriched.results.every(row=>row.historyContext.averageOperatingMonths===42.5));
+  assert(enriched.results.every(row=>row.metrics.openings===null && row.metrics.survivalContext===null));
+});
+
+test('검증된 복수 행정동은 선택지를 반환하고 선택 후 단일 후보를 제공한다', async () => {
+  const hadanAreas=[{district_name:'사하구',dong_name:'하단1동',total:854},{district_name:'사하구',dong_name:'하단2동',total:1586}];
+  const hadanRepository={
+    loadRecommendationData:async()=>({coverage:{total:2440,unmapped:0},areas:hadanAreas,industries:[{industry_code:'S20701',industry_name:'미용실'}]}),
+    loadIndustryCounts:async(codes,rows)=>rows.map(row=>({...row,selected:row.dong_name==='하단1동'?52:81})),
+    loadAreaContexts:repository.loadAreaContexts,
+  };
+  const request={prompt:'하단동에서 미용실을 열고 싶어',conditions:{...conditions,region:'하단동',industry:'미용실'}};
+  const combined=await analyze(request,hadanRepository);
+  assert.deepEqual(combined.results.map(row=>row.name).sort(),['사하구 하단1동','사하구 하단2동']);
+  assert(combined.results.every(row=>row.score!==null));
+  const chosen=await analyze({...request,regionChoice:'사하구 하단1동'},hadanRepository);
+  assert.equal(chosen.results.length,1);
+  assert.equal(chosen.results[0].metrics.industryStores,52);
+  assert.equal(chosen.results[0].score,null);
+  assert.match(chosen.results[0].scoreUnavailableReason,/비교 대상/);
+});
+
+function dispatch(url, method='GET', data) {
+  return new Promise(resolve => {
+    const req = Readable.from(data?[JSON.stringify(data)]:[]);
+    req.url=url; req.method=method;
+    const response={status:0,writeHead(status){this.status=status;return this;},end(content=''){resolve({status:this.status,content:String(content)});return this;}};
     server.emit('request',req,response);
   });
 }
-test('정적 루트, 헬스 체크, 알 수 없는 API와 잘못된 요청',async()=>{
-  assert.equal((await dispatch('/')).status,200);
-  assert.equal(JSON.parse((await dispatch('/api/health')).content).openaiConfigured,true);
+test('헬스 체크와 잘못된 추천 요청', async () => {
+  assert.equal(JSON.parse((await dispatch('/api/health')).content).openaiConfigured, true);
   assert.equal((await dispatch('/api/missing')).status,404);
   assert.equal((await dispatch('/api/analyze','POST',{prompt:''})).status,422);
 });

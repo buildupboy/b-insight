@@ -7,6 +7,7 @@ export function shown(value) {
 export const scoreLabels={fit:'지역·업종 적합도',competition:'경쟁 적합도',stability:'안정성',growth:'성장성'};
 
 const months=value=>value==null?'자료 없음':`${shown(value)}개월`;
+const operatingMonths=value=>value==null?'산출 불가':`${Number(value).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1})}개월`;
 const percent=value=>value==null?'자료 없음':`${(value*100).toLocaleString('ko-KR',{maximumFractionDigits:1})}%`;
 const trendText=(openings,closures)=>{
   if(openings==null||closures==null) return '확인된 개업·폐업 기록이 없습니다.';
@@ -34,14 +35,10 @@ function EventTrend({trend}) {
 }
 
 export default function AreaDetail({area,rank,result}) {
-  const {metrics,scores,changeContext,industryEvidence}=area;
+  const {metrics,scores,changeContext,industryEvidence,historyContext,marketReferences}=area;
   const industry=result.matchedIndustry||result.conditions.industry;
   const dong=area.region&&area.name.startsWith(`${area.region} `)?area.name.slice(area.region.length+1):area.name;
   const same=metrics.industryStores,total=metrics.totalStores;
-  const survival=metrics.survivalContext, city=changeContext?.citySurvival;
-  const comparable=changeContext?.survival!=null&&city!=null;
-  const survivalMax=comparable?Math.max(survival,city):1;
-  const period=metrics.eventPeriod;
   const dataMonth=String(area.dataDate??'').replace(/^(\d{4})-?(\d{2})$/,'$1년 $2월');
   const assets='/figma-assets/detail-';
 
@@ -49,7 +46,7 @@ export default function AreaDetail({area,rank,result}) {
     <a className="back-link" href="#results">← 추천 결과</a>
     <section className="panel detail-overview">
       <div className="detail-identity">
-        <span className="tag blue">{rank}위 {area.score==null?'후보':'추천'}</span>
+        <span className="tag blue">{area.score==null?'상대평가 불가':`${rank}위 추천`}</span>
         <h1 id="area-detail-title" tabIndex={-1}>{dong} 상권</h1>
         <p>{[area.region,`${industry} 기준 분석`].filter(Boolean).join(' · ')}</p>
         <div className="chips detail-tags">
@@ -71,23 +68,22 @@ export default function AreaDetail({area,rank,result}) {
 
     <div className="detail-metric-grid">
       <section className="panel detail-metric">
-        <h2>평균 생존기간</h2><strong className="detail-value">{months(survival)}</strong>
-        {comparable?<>
-          <div className="detail-comparison" aria-hidden="true">
-            <div><span>{dong}</span><i style={{width:`${survival/survivalMax*100}%`}}/></div>
-            <div><span>부산 평균</span><i style={{width:`${city/survivalMax*100}%`}}/></div>
-          </div>
-          <p>부산 평균 {months(city)} · {survival===city?'같은 기간':`${months(Math.abs(survival-city))} ${survival>city?'더 김':'더 짧음'}`}</p>
-        </>:<p>{survival!=null&&changeContext?.survival==null?'폐업 이력에서 집계한 평균 영업기간':'비교 가능한 부산 평균 자료가 없습니다.'}</p>}
+        <h2>평균 영업기간</h2><strong className="detail-value">{operatingMonths(historyContext?.averageOperatingMonths)}</strong>
+        <p>폐업 업소 기록 기준 · 인허가일~폐업일 · {historyContext?.scope||'집계 범위 확인 불가'}</p>
+        <p>유효 표본 {shown(historyContext?.validSample)}건 · 추천 점수 미반영</p>
+        {historyContext?.operatingPeriod?.from&&<p>표본 인허가일 {historyContext.operatingPeriod.from}부터 폐업일 {historyContext.operatingPeriod.to}까지</p>}
+        <p>동일 업소 식별 ID가 없어 주요 사건 필드가 같은 기록만 중복 제거했습니다.</p>
       </section>
       <section className="panel detail-metric">
-        <h2>{period?.stale?'기록된 개업 · 폐업':'최근 개업 · 폐업'}</h2>
-        {metrics.openings!=null&&metrics.closures!=null?<div className="detail-event-values">
-          <span><span className="sr-only">개업 </span>+{shown(metrics.openings)}</span>
-          <span><span className="sr-only">폐업 </span>−{shown(metrics.closures)}</span>
-        </div>:<strong className="detail-value">자료 없음</strong>}
-        <p>{trendText(metrics.openings,metrics.closures)}</p>
-        {period&&<p>{period.from} ~ {period.to}</p>}
+        <h2>개업</h2><strong className="detail-value">{shown(historyContext?.permitRecords)}</strong>
+        <p>인허가일 기준 · {historyContext?.scope||'행정동 전체 업종'} · 실제 개업일과 다를 수 있음</p>
+        <p>{historyContext?.permitPeriod?.from?`${historyContext.permitPeriod.from} ~ ${historyContext.permitPeriod.to}`:'관측 기간 없음'} · 점수 미반영</p>
+      </section>
+      <section className="panel detail-metric">
+        <h2>폐업</h2><strong className="detail-value">{shown(historyContext?.closureRecords)}</strong>
+        <p>폐업 상태·유효한 폐업일 기준 · {historyContext?.scope||'행정동 전체 업종'}</p>
+        <p>{historyContext?.closurePeriod?.from?`${historyContext.closurePeriod.from} ~ ${historyContext.closurePeriod.to}`:'관측 기간 없음'}</p>
+        <p>폐업일 누락 {shown(historyContext?.exclusions?.missingClosure)}건·날짜 오류 {shown(historyContext?.exclusions?.invalidClosure)}건 제외 · 다른 영업 상태의 폐업일 {shown(historyContext?.nonClosedStatusWithDate)}건 미포함 · 점수 미반영</p>
       </section>
       <section className="panel detail-metric">
         <h2>동일 업종 점포</h2><strong className="detail-value">{same==null?'자료 없음':`${shown(same)}개`}</strong>
@@ -97,17 +93,18 @@ export default function AreaDetail({area,rank,result}) {
     </div>
 
     <section className="panel detail-change">
-      <div><h2>상권 변화 상태</h2><strong>{changeContext?.status||'자료 없음'}</strong></div>
-      <p>평균 폐업기간 {months(changeContext?.averageClosed)}</p>
+      <div><h2>상권 변화 참고</h2><strong>{marketReferences?.length?`${shown(marketReferences.length)}개 상권 연결`:'자료 없음'}</strong></div>
+      <div>{marketReferences?.length?<>{marketReferences.map(market=><p key={market.marketId}>{market.name} · {market.indicator||'변화 지표 없음'} · 평균 영업 {months(market.averageOpenMonths)} · 평균 폐업 {months(market.averageCloseMonths)} · 겹침 {market.overlapPct==null?'자료 없음':`${shown(market.overlapPct)}%`} · {market.isPrimary?'주 연결':'참고 연결'} · 경계 기준 {market.boundaryReferenceDate}</p>)}<p>각 값은 상권 단위·전체 업종 참고 자료입니다. 행정동 폐업 기록의 평균 영업기간이나 점수로 사용하지 않았습니다.</p></>:<p>이 행정동에 연결된 상권 변화 자료가 없습니다.</p>}</div>
     </section>
 
     <div className="detail-analysis-grid">
       <section className="panel detail-analysis">
-        <h2>AI 추천 이유</h2>
-        <p>{area.score==null?'이 후보의 종합점수를 계산할 만큼 비교 가능한 지표가 확보되지 않았습니다.':`이 후보는 ${Object.entries(area.effectiveWeights).map(([key,weight])=>`${scoreLabels[key]} ${shown(scores[key])}점(가중치 ${weight}%)`).join(', ')}을 반영해 ${shown(area.score)}점을 받았습니다.`}</p>
+        <h2>추천 이유</h2>
+        <p>{area.score==null?area.scoreUnavailableReason:`이 후보는 ${Object.entries(area.effectiveWeights).map(([key,weight])=>`${scoreLabels[key]} ${shown(scores[key])}점(가중치 ${weight}%)`).join(', ')}을 반영해 ${shown(area.score)}점을 받았습니다.`}</p>
         <div className="detail-caution"><strong>주의할 점</strong>
           {metrics.competition!=null&&<p>전체 점포 중 {industry} 비중은 {percent(metrics.competition)}입니다.</p>}
-          <p>{metrics.eventCategoryScope||'개업·폐업 집계 범위를 확인할 수 없습니다.'}{period?.stale&&' · 제공 자료의 최신 기록 기준이며 성장성 점수에서 제외했습니다.'}</p>
+          <p>{historyContext?.note||'이력 자료가 없어 개업·폐업·평균 영업기간을 산출할 수 없습니다.'}</p>
+          {historyContext?.records>0&&<p>평균 영업기간: 폐업 상태 {shown(historyContext.closedStateRecords)}건 중 {shown(historyContext.excludedSampleRecords)}건 제외. 사유별로 인허가일 누락 {shown(historyContext.exclusions.missingPermit)}건, 날짜 오류 {shown(historyContext.exclusions.invalidPermit)}건, 폐업일 누락 {shown(historyContext.exclusions.missingClosure)}건, 날짜 오류 {shown(historyContext.exclusions.invalidClosure)}건, 날짜 역전 {shown(historyContext.exclusions.reversedDates)}건입니다. 한 기록에 여러 사유가 겹칠 수 있습니다.</p>}
         </div>
         <div className="detail-charts">
           <section><h3>개업·폐업 추이</h3><EventTrend trend={metrics.eventTrend}/></section>
@@ -123,9 +120,10 @@ export default function AreaDetail({area,rank,result}) {
             <tbody>{Object.entries(scoreLabels).map(([key,label])=><tr key={key}><th scope="row">{label}</th><td>{shown(scores[key])}</td><td>{area.effectiveWeights[key]??0}%</td></tr>)}</tbody>
           </table>
           <ul>
-            <li>점포 수와 업종 비중 · 소상공인시장진흥공단 상가정보{industryEvidence?.filter&&` (${Object.values(industryEvidence.filter).join(', ')})`}</li>
-            <li>평균 생존기간과 상권 변화 · 부산광역시 상권 변화지표. 폐업 이력의 영업기간을 사용한 경우 평균 생존기간 카드에 표시했습니다.</li>
-            <li>개업·폐업과 추이 · 부산광역시 점포이력{metrics.historyRecords!=null&&` · 주소·업종 일치 이력 ${shown(metrics.historyRecords)}건`}</li>
+            <li>점포 수와 업종 비중 · Supabase public.stores{industryEvidence?.filter&&` (${Object.values(industryEvidence.filter).flat().join(', ')})`}</li>
+            <li>평균 영업기간 · 이력의 폐업 기록·전체 업종 기준으로 산출했으며 점수에는 미적용</li>
+            <li>상권 변화 · 상권 단위·전체 업종 참고값으로 점수에는 미적용</li>
+            <li>개업·폐업과 추이 · 이력의 업종 대응과 관측 기간이 확인되지 않아 미적용</li>
             {(area.notes||[]).map(note=><li key={note}>{note}</li>)}
           </ul>
         </details>

@@ -28,7 +28,7 @@ test('불완전한 페이지, 업종 점포 ID 불일치, 비교값 동률은 �
   const b=makeCandidate(dong('2623010001','전포동'),result([store('3','2623010001'),store('4','2623010001')]),result([store('3','2623010001')]),industry);
   rank([a,b],conditions);
   assert.equal(a.score,null);
-  assert.equal(b.verdict,'데이터 부족');
+  assert.equal(b.verdict,'상대평가 불가');
 });
 
 test('stale event history remains visible but is excluded from growth scoring',()=>{

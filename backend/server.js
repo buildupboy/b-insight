@@ -2,28 +2,17 @@ import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseConditions, validate, InputError } from './conditions.js';
-import { zones, stores, dongStores, discoverDongs, administrativeDongs, industryCodes, changes, history, DataApiError } from './data.js';
-import { resolveRegion, resolveIndustry } from './resolve.js';
+import { parseConditions, validate, InputError, ConditionServiceError } from './conditions.js';
+import { resolveDbRegion } from './region-match.js';
+import { resolveDbIndustry } from './industry-match.js';
 import { makeCandidate, rank } from './score.js';
-
-async function mapLimit(items, limit, worker) {
-  const results = new Array(items.length);
-  let next = 0;
-  async function run() {
-    while (true) {
-      const index = next++;
-      if (index >= items.length) return;
-      results[index] = await worker(items[index], index);
-    }
-  }
-  await Promise.all(Array.from({length:Math.min(limit,items.length)},run));
-  return results;
-}
+import { loadRecommendationData, loadIndustryCounts, RecommendationDbError } from './recommendation-db.js';
+import { loadAreaContexts } from './recommendation-context-db.js';
 
 const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'frontend', 'dist');
 const types = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png' };
 const json = (response, status, value) => { response.writeHead(status, {'Content-Type':'application/json; charset=utf-8'}); response.end(JSON.stringify(value)); };
+const logTiming = (status, timing) => { if (process.env.NODE_ENV !== 'test') console.info(JSON.stringify({event:'recommendation_analyze',status,timing})); };
 const compact = value => String(value || '').toLowerCase().replace(/[\s_\-·(),./]/g,'');
 const parseEventDate = value => {
   const m=String(value||'').match(/^(\d{4})[-/]?(\d{2})[-/]?(\d{2})/);
@@ -103,162 +92,96 @@ export function historyMetrics(result,dong,industry,conditions,storeRows) {
   }
   return {verified:true,truncated:false,openings,closures,monthly:[...monthly.values()],closedTenureMonths:tenures.length?Math.round(tenures.reduce((a,b)=>a+b,0)/tenures.length):null,matchedRows:matched,categoryScope,period:{from:periodStart.toISOString().slice(0,10),to:periodEnd.toISOString().slice(0,10),stale,latestObserved:latest.toISOString().slice(0,10)},fields:['rdnwhladdr','upjongnm','minornm','majornm','apvpermymd','dcbymd']};
 }
-function reportedMonths(rows, field) {
-  const values=[...new Set(rows.map(row=>Number(row[field])).filter(value=>Number.isFinite(value)&&value>0&&value<=1200))];
-  return values.length===1?values[0]:null;
-}
 async function readBody(request) {
   let value = '';
   for await (const chunk of request) { value += chunk; if (value.length > 12000) throw new InputError('입력 크기를 줄여 주세요.'); }
   try { return JSON.parse(value); } catch { throw new InputError('요청 형식이 올바르지 않습니다.'); }
 }
-export async function analyze(input) {
-  const conditions = input.conditions ? validate(input.conditions) : await parseConditions(input.prompt);
-  const warnings = [];
-  const allZones = await zones();
-  if (!allZones.length) throw new InputError('부산 상권 후보를 찾지 못했습니다.');
-  const region = resolveRegion(conditions.region, allZones);
-  const small = await industryCodes('small');
-  let industry;
-  try { industry = resolveIndustry(conditions.industry, small.rows, []); }
-  catch (error) {
-    if (!(error instanceof InputError)) throw error;
-    industry = resolveIndustry(conditions.industry, small.rows, (await industryCodes('large')).rows);
-  }
-  // Start independent Busan feeds while commercial areas are being resolved.
-  const changeLoad=changes().then(value=>({value}),error=>({error}));
-  const historyLoad=history().then(value=>({value}),error=>({error}));
-  const dongs = new Map();
-  const zoneDongCodes = new Map();
-  await mapLimit(region.zones.slice(0, 10), 3, async zone => {
-    if (/^26\d{6}(?:\d{2})?$/.test(String(zone.adongCd)))
-      dongs.set(String(zone.adongCd), { adongCd:String(zone.adongCd), adongNm:null, signguNm:zone.signguNm, signguCd:String(zone.signguCd) });
-    if (/^26\d{6}(?:\d{2})?$/.test(String(zone.adongCd))) zoneDongCodes.set(String(zone.trarNo),new Set([String(zone.adongCd)]));
-    try {
-      const area = await stores(zone.trarNo);
-      for (const row of area.rows) {
-        if (/^26\d{6}(?:\d{2})?$/.test(String(row.adongCd)) && (!row.signguCd || String(row.signguCd) === String(zone.signguCd)))
-          { dongs.set(String(row.adongCd), { adongCd:String(row.adongCd), adongNm:row.adongNm || dongs.get(String(row.adongCd))?.adongNm || null, signguNm:row.signguNm || zone.signguNm, signguCd:String(zone.signguCd) }); const codes=zoneDongCodes.get(String(zone.trarNo))||new Set(); codes.add(String(row.adongCd)); zoneDongCodes.set(String(zone.trarNo),codes); }
-      }
-    } catch (error) { warnings.push(error instanceof DataApiError ? error.message : '행정동 후보 확인 실패'); }
-  });
-  if (dongs.size < 2) {
-    const districtCodes=[...new Set(region.zones.map(z=>String(z.signguCd)).filter(code=>/^26\d{3}$/.test(code)))];
-    for (const code of districtCodes.slice(0, 2)) {
-      try {
-        const discovered=await discoverDongs(code);
-        for (const row of discovered.rows) if (/^26\d{6}(?:\d{2})?$/.test(String(row.adongCd)) && String(row.signguCd)===code && row.adongNm && row.signguNm)
-          dongs.set(String(row.adongCd),{adongCd:String(row.adongCd),adongNm:row.adongNm,signguNm:row.signguNm,signguCd:code});
-        if (discovered.total !== null && discovered.rawCount < discovered.total)
-          warnings.push('시군구의 점포 첫 페이지에서 행정동 후보를 추가로 확인했습니다. 전체 행정동 목록은 아닙니다.');
-      } catch(error) { warnings.push(error instanceof DataApiError ? error.message : '시군구 행정동 후보 조회 실패'); }
+export async function analyze(input, repository = { loadRecommendationData, loadIndustryCounts, loadAreaContexts }) {
+  const timing = { conditionExtractionMs:null, dbQueryMs:null, historyQueryMs:null, changeQueryMs:null, scoringMs:null, serverTotalMs:null };
+  let conditions;
+  let step = performance.now(), stage = 'conditions';
+  try {
+    conditions = input.conditions ? validate(input.conditions) : await parseConditions(input.prompt);
+    timing.conditionExtractionMs = Math.round(performance.now() - step);
+    step = performance.now(); stage = 'database';
+    const data = await repository.loadRecommendationData();
+    timing.dbQueryMs = Math.round(performance.now() - step);
+    stage = 'matching';
+    if (!data.coverage.total || !data.areas.length) throw new RecommendationDbError('Supabase에 추천 가능한 부산 점포가 없습니다.');
+    const region = resolveDbRegion(input.regionChoice || conditions.region, data.areas);
+    const industry = resolveDbIndustry(input.industryChoice || conditions.industry, data.industries);
+    step = performance.now(); stage = 'database-counts';
+    const areaCounts = await repository.loadIndustryCounts(industry.codes, region.areas);
+    timing.dbQueryMs += Math.round(performance.now() - step);
+    step = performance.now(); stage = 'scoring';
+    const candidates = areaCounts.map(row => {
+      const dong = { adongCd:Buffer.from(`${row.district_name}|${row.dong_name}`).toString('base64url'), signguNm:row.district_name, adongNm:row.dong_name };
+      const all = { count:row.total }, filtered = { count:row.selected, total:row.selected, rawCount:row.selected };
+      const candidate = makeCandidate(dong, all, filtered, industry);
+      candidate.changeContext = null;
+      return candidate;
+    });
+    const results = rank(candidates, conditions);
+    timing.scoringMs = Math.round(performance.now() - step);
+    step = performance.now(); stage = 'database-context';
+    const selectedAreas = results.map(row => ({district_name:row.region,dong_name:row.name.slice(row.region.length+1)}));
+    const contexts = await repository.loadAreaContexts(selectedAreas);
+    timing.historyQueryMs = contexts.historyQueryMs;
+    timing.changeQueryMs = contexts.changeQueryMs;
+    timing.dbQueryMs += Math.round(performance.now() - step);
+    for (const row of results) {
+      const areaKey = `${row.region}\0${row.name.slice(row.region.length+1)}`;
+      row.historyContext = contexts.history.get(areaKey) ?? null;
+      row.marketReferences = contexts.markets.get(areaKey) ?? [];
     }
+    const warnings = ['점포 DB에 기준월이 없어 점포 수의 관측 시점을 표시할 수 없습니다.',
+      '상권 변화지표는 행정동 전체의 검증된 생존 지표가 아니므로 안정성 점수에 반영하지 않았습니다.',
+      '점포이력은 최신 사건일이 오래됐고 현재 점포 업종코드와 분류 체계가 달라 동일 업종 개업·폐업 및 성장성 점수를 제외했습니다.'];
+    if (industry.note) warnings.push(industry.note);
+    if (region.note) warnings.push(region.note);
+    if (conditions.populationRequested) warnings.push('인구·유동인구 자료가 DB에 없어 요청한 인구 지표는 점수에 반영하지 않았습니다.');
+    if (conditions.stability === 'important') warnings.push('안정성 우선 요청은 적용 가능한 안정성 점수가 없어 가중치에 반영되지 않았습니다.');
+    if (conditions.growth === 'important') warnings.push('성장성 우선 요청은 적용 가능한 성장성 점수가 없어 가중치에 반영되지 않았습니다.');
+    if (region.scope === 'dong') warnings.push('행정동 한 곳의 점포 수는 표시하지만 상대평가 점수는 계산할 수 없습니다.');
+    return { conditions, resolvedRegion:region.label, matchedIndustry:industry.label, industryCode:industry.filter,
+      results, warnings, analyzedAt:new Date().toISOString(), sources:['Supabase PostgreSQL public.stores (부산 점포)',
+        'public.commercial_history_by_dong (행정동 전체 업종 참고)',
+        'public.commercial_change_by_dong (상권 단위 참고)'], timing };
+  } catch (error) {
+    if (stage === 'conditions') timing.conditionExtractionMs = Math.round(performance.now() - step);
+    if (stage === 'database') timing.dbQueryMs = Math.round(performance.now() - step);
+    if (stage === 'database-counts') timing.dbQueryMs += Math.round(performance.now() - step);
+    if (stage === 'database-context') timing.dbQueryMs += Math.round(performance.now() - step);
+    if (stage === 'scoring') timing.scoringMs = Math.round(performance.now() - step);
+    error.timing = timing;
+    error.extractedConditions = conditions ?? error.extractedConditions;
+    throw error;
   }
-  if (dongs.size < 2) {
-    try {
-      const listed=await administrativeDongs();
-      const districtCodes=new Set(region.zones.map(z=>String(z.signguCd)));
-      for (const dong of listed) if (districtCodes.has(String(dong.signguCd)))
-        dongs.set(String(dong.adongCd),{adongCd:String(dong.adongCd),adongNm:dong.adongNm,signguNm:dong.signguNm,signguCd:String(dong.signguCd)});
-      if (dongs.size>1) warnings.push('상권 주변 행정동 자료가 부족해 같은 구의 행정동으로 비교 범위를 넓혔습니다.');
-    } catch(error) { warnings.push(error instanceof DataApiError ? error.message : '행정동 코드 자료 조회 실패'); }
-  }
-  if (region.zones.length > 10) warnings.push('관련 상권 10곳에서 확인된 행정동만 비교했습니다.');
-  if (dongs.size > 12) warnings.push('먼저 확인된 행정동 12곳만 비교했습니다.');
-  const storeData = await mapLimit([...dongs.values()].slice(0, 12), 3, async dong => {
-    let all={rows:[],truncated:true}, filtered={rows:[],truncated:true};
-    const [allResult,filteredResult]=await Promise.allSettled([dongStores(dong.adongCd),dongStores(dong.adongCd,industry.filter)]);
-    if(allResult.status==='fulfilled') all=allResult.value;
-    else warnings.push(allResult.reason instanceof DataApiError ? allResult.reason.message : dong.signguNm+' '+dong.adongNm+' 전체 점포 조회 실패');
-    if(filteredResult.status==='fulfilled') filtered=filteredResult.value;
-    else warnings.push(filteredResult.reason instanceof DataApiError ? filteredResult.reason.message : dong.signguNm+' '+dong.adongNm+' 선택 업종 조회 실패');
-    return {dong,all,filtered};
-  });
-  // Give supplementary feeds a short grace period once the candidate data is ready.
-  let metricsTimer;
-  const metricsDeadline = new Promise(resolve => { metricsTimer = setTimeout(resolve, 5000, null); });
-  const [loadedChange,loadedHistory] = await Promise.all([
-    Promise.race([changeLoad,metricsDeadline]),
-    Promise.race([historyLoad,metricsDeadline]),
-  ]);
-  clearTimeout(metricsTimer);
-  const changeByDong = new Map();
-  if (!loadedChange) warnings.push('부산 변화지표 응답이 늦어 해당 자료의 생존기간을 표시하지 않습니다.');
-  else try {
-    if(loadedChange.error) throw loadedChange.error;
-    const change=loadedChange.value;
-    if (!change.truncated || (change.total !== null && change.rawCount >= change.total)) {
-      const zoneNames=new Map(), changeNames=new Map();
-      const compact=value=>String(value||'').replace(/\s|_/g,'');
-      for (const zone of allZones) { const name=compact(zone.mainTrarNm); zoneNames.set(name,[...(zoneNames.get(name)||[]),zone]); }
-      for (const row of change.rows) { const name=compact(row.comm_nm); changeNames.set(name,[...(changeNames.get(name)||[]),row]); }
-      const values=new Map();
-      for (const [name,items] of zoneNames) {
-        const matched=changeNames.get(name);
-        const dongCodes=zoneDongCodes.get(String(items[0].trarNo)) || new Set(items[0].adongCd?[String(items[0].adongCd)]:[]);
-        if (items.length!==1 || !dongCodes.size || [...dongCodes].some(code=>!/^26\d{6}(?:\d{2})?$/.test(code)) || !matched?.length) continue;
-        const statuses=[...new Set(matched.map(row=>String(row.change_indicator_nm??'').trim()).filter(Boolean))];
-        const indicators={
-          survival:reportedMonths(matched,'average_open_months'),
-          citySurvival:reportedMonths(matched,'busan_average_open_months'),
-          averageClosed:reportedMonths(matched,'average_close_months'),
-          status:statuses.length===1?statuses[0]:null,
-        };
-        for (const dongCode of dongCodes) values.set(dongCode,[...(values.get(dongCode)||[]),indicators]);
-      }
-      for (const [code,indicators] of values) {
-        const average=field=>{
-          const months=indicators.map(item=>item[field]).filter(Number.isFinite);
-          return months.length?Math.round(months.reduce((a,b)=>a+b,0)/months.length):null;
-        };
-        const statuses=[...new Set(indicators.map(item=>item.status))];
-        changeByDong.set(code,{survival:average('survival'),averageClosed:average('averageClosed'),
-          citySurvival:reportedMonths(indicators,'citySurvival'),status:statuses.length===1?statuses[0]:null});
-      }
-    } else warnings.push('부산 변화지표 일부 페이지를 확인하지 못해 생존기간 참고값을 제외했습니다.');
-  } catch(error) { warnings.push(error instanceof DataApiError ? error.message : '부산 변화지표 조회 실패'); }
-  let historyData=null;
-  if (!loadedHistory) warnings.push('부산 점포이력 응답이 늦어 개업·폐업 수치를 표시하지 않습니다.');
-  else try {
-    if(loadedHistory.error) throw loadedHistory.error;
-    historyData=loadedHistory.value;
-    if(historyData.truncated) warnings.push(`부산 점포이력 전체 자료 조회가 미완료라 개업·폐업 수치는 표시하지 않습니다 (${historyData.rawCount}/${historyData.total??'전체 건수 확인 불가'}).`);
-    if(historyData.stale) warnings.push(`새 점포이력 조회 실패로 저장된 이전 자료(${new Date(historyData.cachedAt).toLocaleDateString('ko-KR')})를 사용합니다.`);
-  } catch(error) { warnings.push(error instanceof DataApiError ? error.message : '부산 점포이력 전체 자료 조회 실패'); }
-  const candidates = [];
-  for (const {dong,all,filtered} of storeData) {
-    const names=[...new Set(all.rows.map(r=>r.adongNm).filter(Boolean))];
-    if (!dong.adongNm && names.length === 1) dong.adongNm=names[0];
-    if (!dong.adongNm) { warnings.push(dong.signguNm+' 행정동 이름을 확인할 수 없어 해당 후보를 제외했습니다.'); continue; }
-    let events=null;
-    if(historyData) try {
-      const mapped=historyMetrics(historyData,dong,industry,conditions,all.rows);
-      events=mapped;
-      if(!mapped.verified) warnings.push(`${dong.signguNm} ${dong.adongNm}: ${mapped.reason}`);
-      else if(mapped.period?.stale) warnings.push(`점포이력 최신 관측일은 ${mapped.period.latestObserved}입니다. 개업·폐업은 제공 자료의 최근 ${conditions.months}개월(${mapped.period.from}~${mapped.period.to}) 기준으로 표시합니다.`);
-    } catch(error) { events={verified:false,reason:error instanceof DataApiError?error.message:'history fetch failed'}; warnings.push(`${dong.signguNm} ${dong.adongNm}: ${events.reason}`); }
-    const change=changeByDong.get(dong.adongCd);
-    const survival=change?.survival??events?.closedTenureMonths??null;
-    const candidate=makeCandidate(dong,all,filtered,industry,events,survival);
-    candidate.changeContext=change??null;
-    candidates.push(candidate);
-  }
-  return { conditions, resolvedRegion:region.label, matchedIndustry:industry.label, industryCode:industry.filter,
-    results:rank(candidates,conditions), warnings:[...new Set(warnings)],
-    analyzedAt:new Date().toISOString(),
-    sources:['소상공인시장진흥공단 행정동 점포','부산광역시 상권 변화지표(같은 구 참고값)','부산광역시 상권 점포이력(업종 연결 확인 전 제외)'] };
 }
 export const server = createServer(async (request, response) => {
   try {
     const requested = new URL(request.url, 'http://localhost').pathname;
-    if (requested === '/api/health') return json(response, 200, { ok:true, openaiConfigured:Boolean(process.env.OPENAI_API_KEY), publicDataConfigured:Boolean(process.env.DATA_GO_KR_SERVICE_KEY) });
+    if (requested === '/api/health') return json(response, 200, { ok:true, openaiConfigured:Boolean(process.env.OPENAI_API_KEY), databaseConfigured:Boolean(process.env.DATABASE_URL) });
     if (requested === '/api/analyze') {
       if (request.method !== 'POST') return json(response, 405, { error:'POST 요청이 필요합니다.' });
+      const started = performance.now();
       try {
         const input = await readBody(request);
         if (!input || typeof input.prompt !== 'string' || !input.prompt.trim() || input.prompt.length > 2000) throw new InputError('창업 조건을 2000자 이내로 입력해 주세요.');
-        return json(response, 200, await analyze(input));
-      } catch (error) { return json(response, error instanceof InputError ? 422 : 502, { error:error instanceof InputError || error instanceof DataApiError ? error.message : '분석을 완료할 수 없습니다.', choices:error instanceof InputError ? error.choices : [], ...(error instanceof DataApiError ? { diagnostic:error.diagnostic } : {}) }); }
+        const result = await analyze(input);
+        result.timing.serverTotalMs = Math.round(performance.now() - started);
+        logTiming(200, result.timing);
+        return json(response, 200, result);
+      } catch (error) {
+        const status = error instanceof InputError ? 422 : error instanceof ConditionServiceError ? 503 : 502;
+        const timing = { ...(error.timing || {}), serverTotalMs:Math.round(performance.now() - started) };
+        logTiming(status, timing);
+        return json(response, status, { error:error instanceof InputError || error instanceof RecommendationDbError || error instanceof ConditionServiceError ? error.message : '분석을 완료할 수 없습니다.',
+          choices:error instanceof InputError ? error.choices : [], choiceType:error.choiceType ?? null,
+          conditions:error.extractedConditions ?? null,
+          timing });
+      }
     }
     if (requested.startsWith('/api/')) return json(response, 404, {error:'API 경로를 찾을 수 없습니다.'});
     const relativePath = decodeURIComponent(requested);
