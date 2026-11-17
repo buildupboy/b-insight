@@ -10,7 +10,7 @@ const fields = {
   smallUpjongList: ['indsLclsCd','indsMclsCd','indsMclsNm','indsSclsCd','indsSclsNm','stdrDt'],
   largeUpjongList: ['indsLclsCd','indsLclsNm','stdrDt'],
   storeListInArea: ['bizesId','adongCd','adongNm','signguCd','signguNm','indsLclsCd','indsMclsCd','indsSclsCd','rdnmAdr','lnoAdr','stdrYm'],
-  storeListInDong: ['bizesId','adongCd','adongNm','signguCd','signguNm','indsLclsCd','indsMclsCd','indsSclsCd','rdnmAdr','lnoAdr','stdrYm'],
+  storeListInDong: ['bizesId','bizesNm','ctprvnCd','adongCd','adongNm','signguCd','signguNm','indsLclsCd','indsMclsCd','indsSclsCd','indsSclsNm','rdnmAdr','lnoAdr','lat','lon','stdrYm'],
   getCommercialChangeList: ['type_nm','comm_nm','change_indicator_nm','average_open_months','average_close_months','busan_average_open_months','busan_average_close_months'],
   getCommercialHistoryList: ['bplcnm','majornm','minornm','upjongnm','trdstatenm','geom','rdnwhladdr','apvpermymd','dcbymd']
 };
