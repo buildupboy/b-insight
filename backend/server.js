@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseConditions, validate, InputError, ConditionServiceError } from './conditions.js';
 import { resolveDbRegion } from './region-match.js';
-import { resolveDbIndustry } from './industry-match.js';
+import { resolveDbIndustry, resolveIndustryIntent } from './industry-match.js';
 import { makeCandidate, rank } from './score.js';
 import { loadRecommendationData, loadIndustryCounts, RecommendationDbError } from './recommendation-db.js';
 import { loadAreaContexts } from './recommendation-context-db.js';
@@ -110,7 +110,13 @@ export async function analyze(input, repository = { loadRecommendationData, load
     stage = 'matching';
     if (!data.coverage.total || !data.areas.length) throw new RecommendationDbError('Supabase에 추천 가능한 부산 점포가 없습니다.');
     const region = resolveDbRegion(input.regionChoice || conditions.region, data.areas);
-    const industry = resolveDbIndustry(input.industryChoice || conditions.industry, data.industries);
+    const industryResolution = input.industryChoice || input.conditions
+      ? { requested:input.industryChoice || conditions.industry,
+          match:resolveDbIndustry(input.industryChoice || conditions.industry,data.industries), recovered:false }
+      : resolveIndustryIntent(conditions.industry,input.prompt,data.industries);
+    const industry = industryResolution.match;
+    if (industryResolution.recovered || input.industryChoice)
+      conditions = { ...conditions, industry:industryResolution.requested };
     step = performance.now(); stage = 'database-counts';
     const areaCounts = await repository.loadIndustryCounts(industry.codes, region.areas);
     timing.dbQueryMs += Math.round(performance.now() - step);
@@ -149,6 +155,8 @@ export async function analyze(input, repository = { loadRecommendationData, load
         'public.commercial_history_by_dong (행정동 전체 업종 참고)',
         'public.commercial_change_by_dong (상권 단위 참고)'], timing };
   } catch (error) {
+    if (error.requestedIndustry && conditions && !conditions.industry)
+      conditions = { ...conditions, industry:error.requestedIndustry };
     if (stage === 'conditions') timing.conditionExtractionMs = Math.round(performance.now() - step);
     if (stage === 'database') timing.dbQueryMs = Math.round(performance.now() - step);
     if (stage === 'database-counts') timing.dbQueryMs += Math.round(performance.now() - step);

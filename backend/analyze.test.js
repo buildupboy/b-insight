@@ -5,6 +5,7 @@ process.env.NODE_ENV = 'test';
 process.env.OPENAI_API_KEY = 'fixture-openai';
 const { analyze, server } = await import('./server.js');
 const { RecommendationDbError } = await import('./recommendation-db.js');
+const { verifiedFoodFamilies } = await import('./industry-match.js');
 
 const areas = [
   { district_name:'부산진구', dong_name:'부전1동', total:100 },
@@ -71,6 +72,67 @@ test('이력 평균은 응답에만 붙고 기존 점수·정렬을 바꾸지 �
     baseline.results.map(row=>[row.name,row.score,row.scores,row.effectiveWeights]));
   assert(enriched.results.every(row=>row.historyContext.averageOperatingMonths===42.5));
   assert(enriched.results.every(row=>row.metrics.openings===null && row.metrics.survivalContext===null));
+});
+
+test('AI가 업종을 누락하면 원문의 검증된 동의어를 DB 코드로 복구한다', async () => {
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async()=>new Response(JSON.stringify({choices:[{message:{content:JSON.stringify({
+    ...conditions,industry:'',region:'부산진구'
+  })}}]}));
+  try {
+    const result=await analyze({prompt:'부산진구에서 커피 전문점을 열고 싶어'},repository);
+    assert.equal(result.conditions.industry,'커피전문점');
+    assert.deepEqual(result.industryCode,{indsSclsCd:'I21201'});
+    assert.equal(result.matchedIndustry,'카페');
+  } finally {globalThis.fetch=originalFetch;}
+});
+
+test('AI가 미지원 업종을 누락해도 원문의 명시적 표현을 미입력과 구분한다', async () => {
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async()=>new Response(JSON.stringify({choices:[{message:{content:JSON.stringify({
+    ...conditions,industry:'',region:'부산 전체'
+  })}}]}));
+  try {
+    await assert.rejects(()=>analyze({prompt:'부산에서 존재하지 않는 업종을 창업하고 싶어'},repository),
+      error=>/존재하지 않는 업종/.test(error.message) &&
+        error.extractedConditions.industry==='존재하지 않는 업종');
+    await assert.rejects(()=>analyze({prompt:'부산에서 가게를 열고 싶어'},repository),
+      error=>/업종을 입력/.test(error.message));
+  } finally {globalThis.fetch=originalFetch;}
+});
+
+test('원문에서 복수 업종을 말하면 AI가 하나만 뽑아도 선택지를 반환한다', async () => {
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async()=>new Response(JSON.stringify({choices:[{message:{content:JSON.stringify({
+    ...conditions,industry:'카페',region:'부산진구'
+  })}}]}));
+  try {
+    const completeRepository={...repository,loadRecommendationData:async()=>({
+      coverage:{total:450,unmapped:0},areas,
+      industries:[...Object.values(verifiedFoodFamilies).flat().map(([industry_code,industry_name])=>({industry_code,industry_name})),
+        {industry_code:'I21201',industry_name:'카페'}]
+    })};
+    await assert.rejects(()=>analyze({prompt:'부산진구에서 음식점이나 카페 중 고민 중이야'},completeRepository),
+      error=>error.choiceType==='industry'&&error.choices.join('|')==='음식점|카페');
+  } finally {globalThis.fetch=originalFetch;}
+});
+
+test('업종 선택지 클릭 후 실제 선택 업종을 조건과 복수 코드 집계에 유지한다', async () => {
+  const foodRows=Object.values(verifiedFoodFamilies).flat()
+    .map(([industry_code,industry_name])=>({industry_code,industry_name}));
+  const selected=await analyze({prompt:'부산진구에서 음식점이나 카페 중 고민 중이야',
+    conditions:{...conditions,industry:'카페'},industryChoice:'음식점'}, {
+    ...repository,
+    loadRecommendationData:async()=>({coverage:{total:450,unmapped:0},areas,
+      industries:[...foodRows,{industry_code:'I21201',industry_name:'카페'}]}),
+    loadIndustryCounts:async(codes,selectedAreas)=>{
+      assert.equal(codes.length,38);
+      return selectedAreas.map(area=>({...area,selected:20}));
+    }
+  });
+  assert.equal(selected.conditions.industry,'음식점');
+  assert.equal(selected.industryCode.indsSclsCds.length,38);
+  assert.equal(selected.matchedIndustry,'음식점·간이음식 전체');
 });
 
 test('검증된 복수 행정동은 선택지를 반환하고 선택 후 단일 후보를 제공한다', async () => {

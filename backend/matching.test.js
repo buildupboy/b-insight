@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveDbRegion, RegionMatchError } from './region-match.js';
-import { resolveDbIndustry, IndustryMatchError } from './industry-match.js';
+import { resolveDbIndustry, resolveIndustryIntent, verifiedFoodFamilies, IndustryMatchError } from './industry-match.js';
 import { makeCandidate, rank } from './score.js';
 
 const areas = [
@@ -12,14 +12,13 @@ const areas = [
   {district_name:'부산진구',dong_name:'부전2동',total:2900},
 ];
 const industries = [
+  ...Object.values(verifiedFoodFamilies).flat().map(([industry_code,industry_name])=>({industry_code,industry_name})),
   {industry_code:'S20701',industry_name:'미용실'},
   {industry_code:'S20703',industry_name:'네일숍'},
   {industry_code:'I21201',industry_name:'카페'},
   {industry_code:'R10202',industry_name:'독서실/스터디 카페'},
-  {industry_code:'I20101',industry_name:'백반/한정식'},
-  {industry_code:'I20199',industry_name:'기타 한식 음식점'},
-  {industry_code:'I21007',industry_name:'김밥/만두/분식'},
   {industry_code:'I21104',industry_name:'요리 주점'},
+  {industry_code:'G20405',industry_name:'편의점'},
 ];
 
 test('부산·구·동 표기를 실제 DB 행정동으로 정규화한다', () => {
@@ -52,10 +51,32 @@ test('실제 코드로 업종명·동의어·넓은 업종을 연결한다', () 
   for (const input of ['카페','커피숍','커피 전문점']) assert.deepEqual(resolveDbIndustry(input,industries).codes,['I21201']);
   for (const input of ['네일숍','네일샵']) assert.deepEqual(resolveDbIndustry(input,industries).codes,['S20703']);
   assert.deepEqual(resolveDbIndustry('분식집',industries).codes,['I21007']);
-  assert.deepEqual(resolveDbIndustry('한식집',industries).codes,['I20101','I20199']);
-  assert.deepEqual(resolveDbIndustry('식당',industries).codes,['I21201','I20101','I20199','I21007','I21104']);
+  assert.equal(resolveDbIndustry('한식집',industries).codes.length,14);
+  assert.equal(resolveDbIndustry('식당',industries).codes.length,38);
+  assert.deepEqual(resolveDbIndustry('음식점',industries).codes,resolveDbIndustry('식당',industries).codes);
+  assert(!resolveDbIndustry('식당',industries).codes.includes('I21201'));
+  assert(!resolveDbIndustry('식당',industries).codes.includes('I21104'));
+  for (const input of ['빵집','베이커리']) assert.deepEqual(resolveDbIndustry(input,industries).codes,['I21001']);
+  assert.deepEqual(resolveDbIndustry('편의점',industries).codes,['G20405']);
   assert.throws(() => resolveDbIndustry('',industries), /업종을 입력/);
   assert.throws(() => resolveDbIndustry('없는 업종',industries), IndustryMatchError);
+});
+
+test('LLM 업종 누락 시 원문의 검증된 표현만 복구하고 복수 선택은 확인한다', () => {
+  const recovered=resolveIndustryIntent('', '부산진구에서 커피 전문점을 열고 싶어',industries);
+  assert.equal(recovered.recovered,true);
+  assert.deepEqual(recovered.match.codes,['I21201']);
+  assert.throws(()=>resolveIndustryIntent('', '하단동에서 창업하고 싶어',industries),/업종을 입력/);
+  assert.throws(()=>resolveIndustryIntent('', '부산에서 가게를 열고 싶어',industries),/업종을 입력/);
+  assert.throws(()=>resolveIndustryIntent('존재하지 않는 업종','부산에서 존재하지 않는 업종을 창업하고 싶어',industries),IndustryMatchError);
+  assert.throws(()=>resolveIndustryIntent('', '부산에서 존재하지 않는 업종을 창업하고 싶어',industries),
+    error=>error instanceof IndustryMatchError && error.requestedIndustry==='존재하지 않는 업종' && /검증된 DB 업종/.test(error.message));
+  assert.throws(()=>resolveIndustryIntent('카페','부산진구에서 음식점이나 카페 중 고민 중이야',industries),
+    error=>error instanceof IndustryMatchError && error.choiceType==='industry' &&
+      error.choices.join('|')==='음식점|카페');
+  assert.deepEqual(resolveIndustryIntent('미용실','하단동에서 미용실을 열고 싶어',industries).match.codes,['S20701']);
+  assert.deepEqual(resolveIndustryIntent('', '카페나 커피숍을 생각 중이야',industries).match.codes,['I21201']);
+  assert.throws(()=>resolveDbIndustry('식당',[...industries,{industry_code:'I20114',industry_name:'새 한식 업종'}]),IndustryMatchError);
 });
 
 test('기본 가중치를 유지하고 경쟁 선호만 우선 반영하며 합계는 100%', () => {

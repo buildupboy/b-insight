@@ -6,12 +6,12 @@ const schema = { type: 'object', additionalProperties: false, required: Object.k
 } };
 export class InputError extends Error { constructor(message, choices = []) { super(message); this.choices = choices; } }
 export class ConditionServiceError extends Error { constructor(message) { super(message); this.name = 'ConditionServiceError'; } }
-export function validate(input) {
+export function validate(input,{allowMissingIndustry=false}={}) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new InputError('분석 조건을 확인해 주세요.');
   const c = { ...defaults, ...input };
   for (const field of ['industry', 'region']) if (typeof c[field] !== 'string' || c[field].length > 100) throw new InputError(`${field} 조건이 올바르지 않습니다.`);
   c.industry = c.industry.trim(); c.region = c.region.trim() || '부산 전체';
-  if (!c.industry) throw new InputError('어떤 업종을 생각하고 계신가요? 업종을 입력해 주세요.');
+  if (!c.industry && !allowMissingIndustry) throw new InputError('어떤 업종을 생각하고 계신가요? 업종을 입력해 주세요.');
   if (!['low','normal','any'].includes(c.competition) || !['normal','important'].includes(c.stability) || !['normal','important'].includes(c.growth)) throw new InputError('선호 조건이 올바르지 않습니다.');
   if (typeof c.populationRequested !== 'boolean') throw new InputError('인구 지표 선호 조건이 올바르지 않습니다.');
   if (!Number.isInteger(c.months) || c.months < 1 || c.months > 36) throw new InputError('분석 기간은 1~36개월로 입력해 주세요.');
@@ -34,7 +34,7 @@ export async function parseConditions(prompt) {
   try {
     const extracted = JSON.parse((await response.json()).choices?.[0]?.message?.content);
     let conditions;
-    try { conditions = validate(extracted); }
+    try { conditions = validate(extracted,{allowMissingIndustry:true}); }
     catch (error) {
       if (error instanceof InputError) error.extractedConditions = {industry:extracted?.industry ?? '',region:extracted?.region ?? '부산 전체'};
       throw error;
