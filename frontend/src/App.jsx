@@ -4,7 +4,7 @@ import AreaDetail, { scoreLabels, shown } from './AreaDetail.jsx';
 const examples=['부산진구에서 카페를 열고 싶어요. 경쟁이 낮은 곳을 추천해줘.','해운대구에서 미용실 창업을 고민 중이야.'];
 const historyBasis=(area,type)=>{const h=area.historyContext;if(!h?.records)return '점포이력 DB · 행정동 전체 업종 이력 없음';const period=type==='permit'?h.permitPeriod:h.closurePeriod;return `점포이력 DB · 행정동 전체 업종 · ${type==='permit'?'인허가일 기준':'폐업 상태·폐업일 기준'} · ${period?.from?`${period.from} ~ ${period.to}`:'유효 날짜 없음'} · 점수 미반영`;};
 const operatingMonths=value=>value==null?'산출 불가':`${Number(value).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1})}개월`;
-const defaults={industry:'',region:'부산 전체',competition:'normal',stability:'normal',growth:'normal',populationRequested:false,months:12,budget:null};
+const defaults={industry:'',region:'부산 전체',competition:'normal',stability:'normal',growth:'normal',populationRequested:false,budget:null};
 
 export default function App() {
   const [prompt,setPrompt]=useState(''),[result,setResult]=useState(null),[conditions,setConditions]=useState(defaults);

@@ -25,7 +25,60 @@ const repository = {
     return {history:new Map(),markets:new Map(),historyQueryMs:0,changeQueryMs:0};
   },
 };
-const conditions = {industry:'카페',region:'부산진구',months:12,competition:'low',stability:'important',growth:'normal',budget:null};
+const conditions = {industry:'카페',region:'부산진구',competition:'low',stability:'important',growth:'normal',budget:null};
+
+test('자연어 조건은 지역·업종·선호를 유지하고 기간 기본값 없이 추천한다', async () => {
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async (_url, options) => {
+    const prompt=JSON.parse(options.body).messages[1].content;
+    return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify({
+      industry:prompt.includes('헤어샵')?'헤어샵':'카페',
+      region:prompt.includes('하단동')?'하단동':prompt.includes('부산진구')?'부산진구':'부산 전체',
+      competition:prompt.includes('경쟁이 적은')?'low':'normal',
+      stability:'normal',growth:'normal',populationRequested:false,budget:null
+    })}}]}));
+  };
+  try {
+    const district=await analyze({prompt:'부산진구에서 카페를 열고 싶어'},repository);
+    assert.equal(district.conditions.region,'부산진구');
+    assert.equal(district.conditions.industry,'카페');
+    assert.equal('months' in district.conditions,false);
+    assert.equal(district.results.length,2);
+
+    const city=await analyze({prompt:'카페를 열고 싶어'},repository);
+    assert.equal(city.conditions.region,'부산 전체');
+    assert.equal(city.results.length,3);
+    assert.deepEqual(city.results.map(row=>row.name).sort(),areas.map(row=>`${row.district_name} ${row.dong_name}`).sort());
+
+    const preference=await analyze({prompt:'경쟁이 적은 곳에서 카페를 열고 싶어'},repository);
+    assert.equal(preference.conditions.competition,'low');
+    assert.equal('months' in preference.conditions,false);
+    assert(preference.results[0].effectiveWeights.competition>city.results[0].effectiveWeights.competition);
+
+    const hadanAreas=[{district_name:'사하구',dong_name:'하단1동',total:854},{district_name:'사하구',dong_name:'하단2동',total:1586}];
+    const hairRepository={
+      ...repository,
+      loadRecommendationData:async()=>({coverage:{total:2440,unmapped:0},areas:hadanAreas,
+        industries:[{industry_code:'S20701',industry_name:'미용실'}]}),
+      loadIndustryCounts:async(codes,selectedAreas)=>{
+        assert.deepEqual(codes,['S20701']);
+        return selectedAreas.map(row=>({...row,selected:row.dong_name==='하단1동'?52:81}));
+      }
+    };
+    const hair=await analyze({prompt:'하단동에서 헤어샵을 열고 싶어'},hairRepository);
+    assert.deepEqual(hair.results.map(row=>row.name).sort(),['사하구 하단1동','사하구 하단2동']);
+    assert.equal(hair.matchedIndustry,'미용실');
+    assert(hair.results.every(row=>row.score!==null));
+  } finally {globalThis.fetch=originalFetch;}
+});
+
+test('레거시 months 입력은 조건·추천·점수·점포 수를 바꾸지 않는다', async () => {
+  const baseline=await analyze({prompt:'부산진구에서 카페를 열고 싶어',conditions},repository);
+  const legacy=await analyze({prompt:'부산진구에서 카페를 열고 싶어',conditions:{...conditions,months:12}},repository);
+  assert.deepEqual(legacy.conditions,baseline.conditions);
+  assert.deepEqual(legacy.results,baseline.results);
+  assert.equal('months' in legacy.conditions,false);
+});
 
 test('DB 집계로 기존 응답 구조를 유지하며 공공 API를 호출하지 않는다', async () => {
   const oldFetch = globalThis.fetch;

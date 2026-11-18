@@ -40,7 +40,6 @@ export function historyMetrics(result,dong,industry,conditions,storeRows) {
   const addressKeys=new Set(storeRows.filter(r=>String(r.adongCd||'')===String(dong.adongCd)).flatMap(r=>[r.rdnmAdr,r.lnoAdr]).filter(Boolean).map(addressKey).filter(Boolean));
   const addressBuckets=new Map();
   for(const key of addressKeys){const prefix=key.slice(0,6);addressBuckets.set(prefix,[...(addressBuckets.get(prefix)||[]),key]);}
-  const now=new Date();
   const addressMatches=row=>{
     const address=compact(row.rdnwhladdr), normalized=addressKey(row.rdnwhladdr);
     if(address.includes(compact(dong.adongNm))) return true;
@@ -65,12 +64,8 @@ export function historyMetrics(result,dong,industry,conditions,storeRows) {
     const rowsWithAnyDate=matchedRows.filter(row=>parseEventDate(row.apvpermymd)||parseEventDate(row.dcbymd)).length;
     return {verified:false,reason:matchedRows.length?`행정동·업종 일치 ${matchedRows.length.toLocaleString('ko-KR')}건 중 유효한 개업·폐업 날짜가 있는 행이 ${rowsWithAnyDate}건입니다.`:'행정동 주소와 업종을 함께 확인한 점포이력 행이 없습니다.'};
   }
-  const requestedStart=new Date(Date.UTC(latest.getUTCFullYear(),latest.getUTCMonth()-conditions.months,latest.getUTCDate()));
-  // 이력 API에는 현재 시점까지의 최신 자료가 항상 있는 것은 아니므로
-  // 데이터에서 확인되는 마지막 사건일을 끝점으로 삼아 최신 관측 1년을 계산합니다.
-  const periodEnd=latest, periodStart=requestedStart;
-  const currentWindowStart=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()-conditions.months,now.getUTCDate()));
-  const stale=latest<currentWindowStart;
+  const periodStart=new Date(latestValues.reduce((min,date)=>Math.min(min,date.valueOf()),Infinity));
+  const periodEnd=latest;
   const monthly=new Map();
   for (const month=new Date(Date.UTC(periodStart.getUTCFullYear(),periodStart.getUTCMonth(),1)); month<=periodEnd; month.setUTCMonth(month.getUTCMonth()+1)) {
     const key=month.toISOString().slice(0,7);
@@ -83,14 +78,14 @@ export function historyMetrics(result,dong,industry,conditions,storeRows) {
     const opened=parseEventDate(row.apvpermymd), closed=parseEventDate(row.dcbymd);
     const key=[compact(row.bplcnm),address,...categories,opened?.toISOString()||'',closed?.toISOString()||''].join('|');
     if(seen.has(key)) continue; seen.add(key);
-    if(opened&&opened>=periodStart&&opened<=periodEnd) { openings++; monthly.get(opened.toISOString().slice(0,7)).openings++; }
-    if(closed&&closed>=periodStart&&closed<=periodEnd) { closures++; monthly.get(closed.toISOString().slice(0,7)).closures++; }
+    if(opened) { openings++; monthly.get(opened.toISOString().slice(0,7)).openings++; }
+    if(closed) { closures++; monthly.get(closed.toISOString().slice(0,7)).closures++; }
     if(opened&&closed&&closed>=opened) tenures.push((closed-opened)/(1000*60*60*24*30.4375));
   }
   if(result.rawCount&&matched===0) {
     return {verified:false,reason:'\uC774\uB825 '+result.rawCount.toLocaleString('ko-KR')+'\uAC74 \uC911 \uD589\uC815\uB3D9 \uC8FC\uC18C \uC77C\uCE58 '+addressMatched.toLocaleString('ko-KR')+'\uAC74, \uC801\uC6A9 \uC5C5\uC885 \uBD84\uB958\uC758 \uC720\uD6A8 \uC774\uB825\uC740 0\uAC74'};
   }
-  return {verified:true,truncated:false,openings,closures,monthly:[...monthly.values()],closedTenureMonths:tenures.length?Math.round(tenures.reduce((a,b)=>a+b,0)/tenures.length):null,matchedRows:matched,categoryScope,period:{from:periodStart.toISOString().slice(0,10),to:periodEnd.toISOString().slice(0,10),stale,latestObserved:latest.toISOString().slice(0,10)},fields:['rdnwhladdr','upjongnm','minornm','majornm','apvpermymd','dcbymd']};
+  return {verified:true,truncated:false,openings,closures,monthly:[...monthly.values()],closedTenureMonths:tenures.length?Math.round(tenures.reduce((a,b)=>a+b,0)/tenures.length):null,matchedRows:matched,categoryScope,period:{from:periodStart.toISOString().slice(0,10),to:periodEnd.toISOString().slice(0,10),latestObserved:latest.toISOString().slice(0,10)},fields:['rdnwhladdr','upjongnm','minornm','majornm','apvpermymd','dcbymd']};
 }
 async function readBody(request) {
   let value = '';
