@@ -7,6 +7,7 @@
     "build": "vite build frontend",
     "test": "node --test backend/*.test.js",
     "diagnose:data": "node --env-file=.env backend/diagnose.js",
+    "data:changes": "node --env-file-if-exists=.env backend/change-db.js",
     "start": "node --env-file=.env backend/server.js"
   },
   "dependencies": {

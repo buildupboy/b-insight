@@ -107,6 +107,73 @@ function reportedMonths(rows, field) {
   const values=[...new Set(rows.map(row=>Number(row[field])).filter(value=>Number.isFinite(value)&&value>0&&value<=1200))];
   return values.length===1?values[0]:null;
 }
+
+function changeByAdministrativeDong(rows, zones, zoneDongCodes, storeData) {
+  const normalizeName = name => String(name ?? '').replace(/[\s_]/g, '');
+  const groupByName = (items, field) => {
+    const groups = new Map();
+    for (const item of items) {
+      const name = normalizeName(item[field]);
+      if (name) groups.set(name, [...(groups.get(name) || []), item]);
+    }
+    return groups;
+  };
+  const zonesByName = groupByName(zones, 'mainTrarNm');
+  const roads = new Map();
+  for (const { dong, all } of storeData) {
+    for (const store of all.rows) {
+      if (String(store.adongCd) !== dong.adongCd || (store.signguCd && String(store.signguCd) !== dong.signguCd)) continue;
+      const address = String(store.rdnmAdr ?? '').trim().replace(/^부산(?:광역시|시)?\s+/, '');
+      if (!address.startsWith(`${dong.signguNm} `)) continue;
+      const match = address.slice(dong.signguNm.length).trimStart().replace(/^\S+[읍면]\s+/, '')
+        .match(/^([가-힣a-zA-Z0-9·.\s-]+?(?:대로|로|길))\s+\d+(?:-\d+)?(?=[\s,(]|$)/u);
+      if (!match) continue;
+      const road = normalizeName(match[1]);
+      const link = roads.get(road) ?? { districts:new Set(), dongs:new Set() };
+      link.districts.add(dong.signguCd);
+      link.dongs.add(dong.adongCd);
+      roads.set(road, link);
+    }
+  }
+
+  const values = new Map();
+  for (const [name, matched] of groupByName(rows, 'comm_nm')) {
+    const matchingZones = zonesByName.get(name) ?? [];
+    if (matchingZones.length > 1) continue;
+    const [zone] = matchingZones;
+    const mappedCodes = zone ? zoneDongCodes.get(String(zone.trarNo)) ?? [zone.adongCd] : [];
+    const zoneCodes = [...mappedCodes].map(String).filter(code => /^26\d{6}(?:\d{2})?$/.test(code));
+    const road = roads.get(name);
+    const matchedByRoad = !zoneCodes.length && road?.districts.size === 1 &&
+      (!zone || road.districts.has(String(zone.signguCd)));
+    if (!zoneCodes.length && !matchedByRoad) continue;
+    const statuses = [...new Set(matched.map(row => String(row.change_indicator_nm ?? '').trim()).filter(Boolean))];
+    const indicators = {
+      name:String(matched[0].comm_nm),
+      survival:reportedMonths(matched, 'average_open_months'),
+      citySurvival:reportedMonths(matched, 'busan_average_open_months'),
+      averageClosed:reportedMonths(matched, 'average_close_months'),
+      status:statuses.length === 1 ? statuses[0] : null,
+      matchedByRoad,
+    };
+    for (const code of matchedByRoad ? road.dongs : zoneCodes) {
+      values.set(code, [...(values.get(code) || []), indicators]);
+    }
+  }
+
+  return new Map([...values].map(([code, entries]) => {
+    const exact = entries.filter(entry => !entry.matchedByRoad);
+    const indicators = exact.length ? exact : entries;
+    const average = field => {
+      const months = indicators.map(item => item[field]).filter(Number.isFinite);
+      return months.length ? Math.round(months.reduce((a, b) => a + b, 0) / months.length) : null;
+    };
+    const statuses = [...new Set(indicators.map(item => item.status))];
+    return [code, { survival:average('survival'), averageClosed:average('averageClosed'),
+      citySurvival:reportedMonths(indicators, 'citySurvival'), status:statuses.length === 1 ? statuses[0] : null,
+      matchMethod:exact.length ? 'zone-name' : 'road-address', matchedAreas:indicators.map(item => item.name) }];
+  }));
+}
 async function readBody(request) {
   let value = '';
   for await (const chunk of request) { value += chunk; if (value.length > 12000) throw new InputError('입력 크기를 줄여 주세요.'); }
@@ -182,39 +249,13 @@ export async function analyze(input) {
     Promise.race([historyLoad,metricsDeadline]),
   ]);
   clearTimeout(metricsTimer);
-  const changeByDong = new Map();
+  let changeByDong = new Map();
   if (!loadedChange) warnings.push('부산 변화지표 응답이 늦어 해당 자료의 생존기간을 표시하지 않습니다.');
   else try {
     if(loadedChange.error) throw loadedChange.error;
     const change=loadedChange.value;
     if (!change.truncated || (change.total !== null && change.rawCount >= change.total)) {
-      const zoneNames=new Map(), changeNames=new Map();
-      const compact=value=>String(value||'').replace(/\s|_/g,'');
-      for (const zone of allZones) { const name=compact(zone.mainTrarNm); zoneNames.set(name,[...(zoneNames.get(name)||[]),zone]); }
-      for (const row of change.rows) { const name=compact(row.comm_nm); changeNames.set(name,[...(changeNames.get(name)||[]),row]); }
-      const values=new Map();
-      for (const [name,items] of zoneNames) {
-        const matched=changeNames.get(name);
-        const dongCodes=zoneDongCodes.get(String(items[0].trarNo)) || new Set(items[0].adongCd?[String(items[0].adongCd)]:[]);
-        if (items.length!==1 || !dongCodes.size || [...dongCodes].some(code=>!/^26\d{6}(?:\d{2})?$/.test(code)) || !matched?.length) continue;
-        const statuses=[...new Set(matched.map(row=>String(row.change_indicator_nm??'').trim()).filter(Boolean))];
-        const indicators={
-          survival:reportedMonths(matched,'average_open_months'),
-          citySurvival:reportedMonths(matched,'busan_average_open_months'),
-          averageClosed:reportedMonths(matched,'average_close_months'),
-          status:statuses.length===1?statuses[0]:null,
-        };
-        for (const dongCode of dongCodes) values.set(dongCode,[...(values.get(dongCode)||[]),indicators]);
-      }
-      for (const [code,indicators] of values) {
-        const average=field=>{
-          const months=indicators.map(item=>item[field]).filter(Number.isFinite);
-          return months.length?Math.round(months.reduce((a,b)=>a+b,0)/months.length):null;
-        };
-        const statuses=[...new Set(indicators.map(item=>item.status))];
-        changeByDong.set(code,{survival:average('survival'),averageClosed:average('averageClosed'),
-          citySurvival:reportedMonths(indicators,'citySurvival'),status:statuses.length===1?statuses[0]:null});
-      }
+      changeByDong = changeByAdministrativeDong(change.rows, allZones, zoneDongCodes, storeData);
     } else warnings.push('부산 변화지표 일부 페이지를 확인하지 못해 생존기간 참고값을 제외했습니다.');
   } catch(error) { warnings.push(error instanceof DataApiError ? error.message : '부산 변화지표 조회 실패'); }
   let historyData=null;
@@ -246,7 +287,7 @@ export async function analyze(input) {
   return { conditions, resolvedRegion:region.label, matchedIndustry:industry.label, industryCode:industry.filter,
     results:rank(candidates,conditions), warnings:[...new Set(warnings)],
     analyzedAt:new Date().toISOString(),
-    sources:['소상공인시장진흥공단 행정동 점포','부산광역시 상권 변화지표(같은 구 참고값)','부산광역시 상권 점포이력(업종 연결 확인 전 제외)'] };
+    sources:['소상공인시장진흥공단 행정동 점포','부산광역시 상권 변화지표(연결 상권 참고값)','부산광역시 상권 점포이력(업종 연결 확인 전 제외)'] };
 }
 export const server = createServer(async (request, response) => {
   try {

@@ -123,3 +123,15 @@ test('change indicators continue through short pages when totalCount says more r
   assert.equal(result.rawCount,15);
   assert.equal(result.truncated,false);
 });
+
+test('raw change snapshots preserve the original bodies in page order', async () => {
+  const bodies = [
+    ' { "response": { "header": { "resultCode": "00" }, "body": { "totalCount": 2, "items": [{ "comm_nm": "해운대시장", "extra": 1.00 }] } } }\n',
+    '{"body":{"totalCount":2,"items":{"item":{"comm_nm":"서면","unknown":null}}}}',
+  ];
+  globalThis.fetch = async url => new Response(bodies[Number(url.searchParams.get('pageNo')) - 1]);
+  const result = await changes({ preserveBody:true });
+  assert.equal(result.total, 2);
+  assert.equal(result.truncated, false);
+  assert.deepEqual(result.rawPages, bodies.map((response_body, i) => ({ page_no:i+1, response_body })));
+});

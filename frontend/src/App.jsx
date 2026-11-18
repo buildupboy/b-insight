@@ -74,12 +74,12 @@ export default function App() {
           <div className="card-head"><span className="rank">{index+1}위</span><div className="area"><h2>{area.name}</h2><span>부산광역시 {area.name} · 행정동 기준</span></div><div className="total-score">{area.score==null?<span className="no-score">데이터 부족</span>:area.score}<small>{area.score==null?'':' 점'}</small></div></div>
           <div className="card-badges"><span className="verdict">{area.verdict}</span><span>행정동 점포 비교</span><span>동일 업종 {shown(area.metrics.industryStores)}곳</span></div>
           <div className="metric-tiles">
-            <div><span>평균 생존기간</span><strong>{area.metrics.survivalContext==null?'데이터 없음':`${shown(area.metrics.survivalContext)}개월`}</strong><small>{area.metrics.survivalContext==null?'연결 가능한 지표 없음':'같은 구 상권 평균 참고값'}</small></div>
+            <div><span>평균 생존기간</span><strong>{area.metrics.survivalContext==null?'데이터 없음':`${shown(area.metrics.survivalContext)}개월`}</strong><small>{area.metrics.survivalContext==null?'연결 가능한 지표 없음':area.changeContext?.matchMethod==='road-address'&&area.changeContext.survival!=null?'도로명주소로 연결한 상권 참고값':area.changeContext?.survival!=null?'연결된 상권 평균 참고값':'폐업 이력의 평균 영업기간'}</small></div>
             <div><span>{area.metrics.eventPeriod?.stale ? '기록된 개업' : '최근 개업'}</span><strong>{shown(area.metrics.openings)}</strong><small>{eventBasis(area,conditions.months)}</small></div>
             <div><span>{area.metrics.eventPeriod?.stale ? '기록된 폐업' : '최근 폐업'}</span><strong>{shown(area.metrics.closures)}</strong><small>{eventBasis(area,conditions.months)}</small></div>
             <div><span>동일 업종 점포</span><strong>{shown(area.metrics.industryStores)}</strong><small>전체 {shown(area.metrics.totalStores)}곳</small></div>
           </div>
-          <div className="reason-box"><strong>✦ AI 추천 이유</strong><p>{area.score==null?'비교 가능한 행정동 자료가 부족해 점수를 표시하지 않았습니다.':`행정동의 전체 점포 ${shown(area.metrics.totalStores)}곳과 선택 업종 ${shown(area.metrics.industryStores)}곳을 비교했습니다. 경쟁 적합도 ${shown(area.scores.competition)}점, 상업 활동 비교 ${shown(area.scores.fit)}점을 반영했습니다.`}{area.metrics.survivalContext!=null?` 같은 구의 확인된 상권 평균 생존기간 ${shown(area.metrics.survivalContext)}개월은 참고값입니다.`:''}</p></div>
+          <div className="reason-box"><strong>✦ AI 추천 이유</strong><p>{area.score==null?'비교 가능한 행정동 자료가 부족해 점수를 표시하지 않았습니다.':`행정동의 전체 점포 ${shown(area.metrics.totalStores)}곳과 선택 업종 ${shown(area.metrics.industryStores)}곳을 비교했습니다. 경쟁 적합도 ${shown(area.scores.competition)}점, 상업 활동 비교 ${shown(area.scores.fit)}점을 반영했습니다.`}</p></div>
 
           <div className="card-actions"><a className="detail-button" id={`area-link-${area.id}`} href={`#area-${area.id}`}>상세 보기</a><button type="button" disabled title="검증된 행정동 중심 좌표가 없습니다.">지도에서 보기</button><button type="button" disabled title="보관함 기능은 준비 중입니다.">♧ 관심 상권 저장</button></div>
         </article>):<div className="panel empty">선택한 지역의 행정동을 공공데이터에서 확인하지 못했습니다. 아래 제공처 오류와 조회 제한을 확인해 주세요. 지역 코드를 직접 입력할 필요는 없습니다.</div>}</div>

@@ -56,7 +56,7 @@ function cached(name, ttl, run) {
   const promise = run().catch(error => { cache.delete(name); throw error; });
   cache.set(name,{ promise, until:Date.now()+ttl }); return promise;
 }
-export async function request(base, route, params = {}, keyName = 'servicekey') {
+export async function request(base, route, params = {}, keyName = 'servicekey', preserveBody = false) {
   const operation = operationOf(route);
   if (!fields[operation]) throw new Error('지원하지 않는 공공데이터 상세기능입니다.');
   const initial = diagnostic(route,params,keyName);
@@ -94,7 +94,8 @@ export async function request(base, route, params = {}, keyName = 'servicekey') 
     throw new DataApiError(diagnostic(route,params,keyName,response.status,contentType,format),reason);
   }
   if (!response.ok) throw new DataApiError(diagnostic(route,params,keyName,response.status,contentType,format,code),`HTTP ${response.status} 오류입니다.`);
-  return { ...normalize(payload,operation), diagnostic:diagnostic(route,params,keyName,response.status,contentType,format,code) };
+  return { ...normalize(payload,operation), diagnostic:diagnostic(route,params,keyName,response.status,contentType,format,code),
+    ...(preserveBody ? { responseBody:text } : {}) };
 }
 export function deduplicate(rows, operation) {
   const keyName = keys[operation];
@@ -109,11 +110,17 @@ export function deduplicate(rows, operation) {
   }
   return { rows:unique, duplicates, missingIds };
 }
-export async function pages(base, route, params, keyName, maxPages = 6, pageSize = 100) {
-  const operation = operationOf(route), rows = [];
+export async function pages(base, route, params, keyName, maxPages = 6, pageSize = 100, preserveBody = false) {
+  const operation = operationOf(route), rows = [], rawPages = [];
   let total = null, rawCount = 0, invalid = 0, lastDiagnostic = null, shortPage = false;
   for (let pageNo=1;pageNo<=maxPages;pageNo++) {
-    const page = await request(base,route,{...params,pageNo,numOfRows:pageSize},keyName);
+    const page = await request(base,route,{...params,pageNo,numOfRows:pageSize},keyName,preserveBody);
+    if (preserveBody) {
+      if (page.total === null || (total !== null && page.total !== total)) {
+        throw new DataApiError(page.diagnostic,'응답 페이지의 전체 건수를 확인할 수 없거나 일치하지 않습니다.');
+      }
+      rawPages.push({ page_no:pageNo, response_body:page.responseBody });
+    }
     rows.push(...page.rows); rawCount += page.rawCount; invalid += page.invalid;
     total = page.total ?? total; lastDiagnostic = page.diagnostic;
     shortPage = page.rawCount < pageSize;
@@ -121,7 +128,7 @@ export async function pages(base, route, params, keyName, maxPages = 6, pageSize
   }
   const distinct = deduplicate(rows,operation);
   const truncated = (!shortPage && (total === null || rawCount < total)) || (total !== null && rawCount < total) || invalid > 0 || distinct.missingIds > 0 || distinct.duplicates > 0;
-  return { ...distinct, total, truncated, rawCount, invalid, diagnostic:lastDiagnostic };
+  return { ...distinct, total, truncated, rawCount, invalid, diagnostic:lastDiagnostic, ...(preserveBody ? { rawPages } : {}) };
 }
 export function zones() {
   return cached('busan-zones',3600000,async () => {
@@ -172,8 +179,9 @@ export function administrativeDongs() {
       /^26\d{3}$/.test(String(row.signguCd)) && row.adongNm && row.signguNm);
   });
 }
-export function changes() {
-  return cached('changes',3600000,() => pages(changeBase,process.env.BUSAN_CHANGE_API_PATH || '/getCommercialChangeList',{resultType:'json'},'serviceKey',60,100));
+export function changes({ preserveBody = false } = {}) {
+  return cached(preserveBody ? 'changes-raw' : 'changes',3600000,() =>
+    pages(changeBase,process.env.BUSAN_CHANGE_API_PATH || '/getCommercialChangeList',{resultType:'json'},'serviceKey',60,100,preserveBody));
 }
 // The live Busan endpoint accepts rdnwhladdr but currently returns the same
 // unfiltered first page for every address. Fetch the published result set once

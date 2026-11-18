@@ -24,14 +24,18 @@ globalThis.fetch=async(input,options)=>{
   if(route.endsWith('/storeZoneInAdmi')) return wrap(zones);
   if(route.endsWith('/smallUpjongList')) return wrap([{indsSclsCd:'I21201',indsSclsNm:'카페'}]);
   if(route.endsWith('/largeUpjongList')) return wrap([{indsLclsCd:'I2',indsLclsNm:'음식점'}]);
-  if(route.endsWith('/getCommercialChangeList')) return wrap(zones.map((zone,i)=>({comm_nm:zone.mainTrarNm,average_open_months:30+i*4,average_close_months:24,busan_average_open_months:28,change_indicator_nm:'확장'})));
+  if(route.endsWith('/getCommercialChangeList')) return wrap([
+    ...zones.filter(zone=>zone.trarNo!=='103').map((zone,i)=>({comm_nm:zone.mainTrarNm,average_open_months:30+i*4,average_close_months:24,busan_average_open_months:28,change_indicator_nm:'확장'})),
+    {comm_nm:'해운대로 100번길',average_open_months:43},
+    {comm_nm:'해운대로',average_open_months:80},
+  ]);
   if(route.endsWith('/getCommercialHistoryList')) return wrap([]);
   if(route.endsWith('/storeListInArea')||route.endsWith('/storeListInDong')) {
     const code=route.endsWith('/storeListInArea')?dongFor(url.searchParams.get('key')):url.searchParams.get('key');
     assert(code);
     const size=code.endsWith('00')?10:20;
     const filtered=url.searchParams.has('indsSclsCd')||url.searchParams.has('indsLclsCd');
-    const rows=Array.from({length:size},(_,i)=>({bizesId:code+'-'+i,adongCd:code,adongNm:nameFor(code),signguCd:code.slice(0,5),signguNm:code.startsWith('26230')?'부산진구':'해운대구',indsSclsCd:i<size/4?'I21201':'I29999',indsLclsCd:'I2',stdrYm:'202601'}));
+    const rows=Array.from({length:size},(_,i)=>({bizesId:code+'-'+i,adongCd:code,adongNm:nameFor(code),signguCd:code.slice(0,5),signguNm:code.startsWith('26230')?'부산진구':'해운대구',indsSclsCd:i<size/4?'I21201':'I29999',indsLclsCd:'I2',stdrYm:'202601',rdnmAdr:code.startsWith('26350')?`부산광역시 해운대구 해운대로100번길 ${i+1}`:undefined}));
     return wrap(filtered&&url.searchParams.has('indsSclsCd')?rows.filter(r=>r.indsSclsCd==='I21201'):rows);
   }
   throw new Error('unexpected fixture operation');
@@ -45,9 +49,14 @@ test('서면 카페를 코드 입력 없이 행정동 2곳으로 비교하고 �
   assert(result.results.every(r=>r.metrics.stability===r.metrics.survivalContext));
   assert(result.results.every(r=>(r.metrics.openings===0&&r.metrics.closures===0)||(r.metrics.openings===null&&r.metrics.closures===null)));
 });
-test('해운대 음식점도 행정동으로만 반환한다',async()=>{
+test('상권명으로 연결되지 않은 도로명은 점포 주소와 행정동 코드로 연결한다',async()=>{
   const result=await analyze({prompt:'해운대에서 음식점 창업을 고민 중이야. 최근 12개월 변화를 반영해줘.'});
   assert.deepEqual(result.results.map(r=>r.id).sort(),['26350100','26350101']);
+  const road=result.results.find(row=>row.id==='26350100');
+  assert.equal(road.changeContext.matchMethod,'road-address');
+  assert.deepEqual(road.changeContext.matchedAreas,['해운대로 100번길']);
+  assert.equal(road.metrics.survivalContext,43);
+  assert.equal(result.results.find(row=>row.id==='26350101').changeContext.matchMethod,'zone-name');
 });
 test('모호한 지역은 지명 선택지를 반환한다',async()=>{
   await assert.rejects(()=>analyze({prompt:'x',conditions:{industry:'카페',region:'없는 지역'}}),error=>error.choices.includes('부산진구'));

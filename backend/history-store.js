@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
-const dbPath=process.env.BINSIGHT_SQLITE_PATH || path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..','.cache','binsight.sqlite');
+export const dbPath=process.env.BINSIGHT_SQLITE_PATH || path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..','.cache','binsight.sqlite');
 const fields=['bplcnm','majornm','minornm','upjongnm','trdstatenm','geom','rdnwhladdr','apvpermymd','dcbymd'];
 let db;
 function database() {

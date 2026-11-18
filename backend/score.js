@@ -29,7 +29,7 @@ export function makeCandidate(dong, all, filtered, industry, events=null, surviv
     industryEvidence:{label:industry.label,filter:industry.filter,totalReported:filtered.total??null,fetched:filtered.rawCount??null,period:b[0]||a[0]||null,subsetConfirmed:complete},
     provenance:{fit:['storeListInDong.bizesId','storeListInDong.adongCd'],competition:['storeListInDong.bizesId','storeListInDong.indsSclsCd','storeListInDong.indsLclsCd'],stability:[],growth:currentGrowth?events.fields:[]},
     notes:[!complete&&'행정동 점포 목록이 불완전하거나 업종 점포의 ID·기준월이 일치하지 않아 점포 지표를 제외했습니다.',
-      '안정성은 행정동·동일 업종에 연결되는 검증된 생존 지표가 없어 제외했습니다.',
+      survivalContext==null&&'연결된 생존기간 자료가 없어 안정성 점수를 계산하지 않았습니다.',
       countEvents&&events.period?.stale&&'이력 제공자료가 오래되어 개업·폐업 기록은 참고값으로만 표시하고 성장성 점수 계산에서는 제외했습니다.',
       !countEvents&&(events?.reason||'\uAC1C\uC5C5\u00B7\uD3D0\uC5C5 \uC790\uB8CC\uB97C \uD655\uC778\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.')].filter(Boolean)
   };

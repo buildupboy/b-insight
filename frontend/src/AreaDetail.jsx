@@ -74,11 +74,12 @@ export default function AreaDetail({area,rank,result}) {
         <h2>평균 생존기간</h2><strong className="detail-value">{months(survival)}</strong>
         {comparable?<>
           <div className="detail-comparison" aria-hidden="true">
-            <div><span>{dong}</span><i style={{width:`${survival/survivalMax*100}%`}}/></div>
+            <div><span>연결 상권</span><i style={{width:`${survival/survivalMax*100}%`}}/></div>
             <div><span>부산 평균</span><i style={{width:`${city/survivalMax*100}%`}}/></div>
           </div>
           <p>부산 평균 {months(city)} · {survival===city?'같은 기간':`${months(Math.abs(survival-city))} ${survival>city?'더 김':'더 짧음'}`}</p>
         </>:<p>{survival!=null&&changeContext?.survival==null?'폐업 이력에서 집계한 평균 영업기간':'비교 가능한 부산 평균 자료가 없습니다.'}</p>}
+        {changeContext?.survival!=null&&changeContext.matchMethod==='road-address'&&<p>점포 도로명주소로 연결된 상권 참고값 · {changeContext.matchedAreas?.join(', ')}</p>}
       </section>
       <section className="panel detail-metric">
         <h2>{period?.stale?'기록된 개업 · 폐업':'최근 개업 · 폐업'}</h2>
