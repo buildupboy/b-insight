@@ -38,7 +38,23 @@ test('분리된 행정동의 통합 검색은 실제 각 동을 독립 후보로
   }
   assert.deepEqual(resolveDbRegion('부전동',areas).areas.map(row=>row.dong_name),['부전1동','부전2동']);
   assert.throws(() => resolveDbRegion('서울 강남구',areas), /부산 지역 데이터만/);
-  assert.throws(() => resolveDbRegion('서면',areas), /확인된 별칭에 연결되지/);
+  assert.deepEqual(resolveDbRegion('서면',areas).areas.map(row=>row.dong_name),['부전1동','부전2동']);
+});
+
+test('verified Seomyeon aliases select only existing Bujeon/Jeonpo administrative dongs',()=>{
+  const all=[...areas,{district_name:'부산진구',dong_name:'전포1동'},{district_name:'부산진구',dong_name:'전포2동'},
+    {district_name:'부산진구',dong_name:'가야1동'},{district_name:'해운대구',dong_name:'부전1동'}];
+  for(const input of ['서면','서면역','서면 근처','부산 서면 일대','부산진구 서면','부산광역시 부산진구 서면역 주변']){
+    const result=resolveDbRegion(input,all);
+    assert.equal(result.scope,'alias-group');
+    assert.deepEqual(result.areas.map(row=>row.dong_name),['부전1동','부전2동','전포1동','전포2동']);
+    assert(result.areas.every(row=>row.district_name==='부산진구'));
+    assert(result.label.includes('전포2동'));
+  }
+  assert.throws(()=>resolveDbRegion('해운대구 서면',all),error=>error.choiceType==='region' && error.choices.length===4);
+  assert.throws(()=>resolveDbRegion('강원 서면',all),/부산 지역 데이터만/);
+  assert.throws(()=>resolveDbRegion('서면',all.filter(row=>row.district_name!=='부산진구')),/연결된 행정동 데이터가 없습니다/);
+  assert.throws(()=>resolveDbRegion('알수없는상권',all),/연결된 구·행정동을 찾지 못했습니다/);
 });
 
 test('동명이 여러 구에 있으면 선택지를 제공한다', () => {

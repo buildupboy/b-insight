@@ -3,7 +3,7 @@ import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseConditions, validate, InputError, ConditionServiceError } from './conditions.js';
-import { resolveDbRegion } from './region-match.js';
+import { resolveRegion } from './region-lookup.js';
 import { resolveDbIndustry, resolveIndustryIntent } from './industry-match.js';
 import { makeCandidate, rank } from './score.js';
 import { describePreferences } from './preferences.js';
@@ -105,7 +105,7 @@ export async function analyze(input, repository = { loadRecommendationData, load
     timing.dbQueryMs = Math.round(performance.now() - step);
     stage = 'matching';
     if (!data.coverage.total || !data.areas.length) throw new RecommendationDbError('Supabase에 추천 가능한 부산 점포가 없습니다.');
-    const region = resolveDbRegion(input.regionChoice || conditions.region, data.areas);
+    const region = await resolveRegion(input.regionChoice || conditions.region, data.areas);
     const industryResolution = input.industryChoice || input.conditions
       ? { requested:input.industryChoice || conditions.industry,
           match:resolveDbIndustry(input.industryChoice || conditions.industry,data.industries), recovered:false }
@@ -113,10 +113,15 @@ export async function analyze(input, repository = { loadRecommendationData, load
     const industry = industryResolution.match;
     if (industryResolution.recovered || input.industryChoice)
       conditions = { ...conditions, industry:industryResolution.requested };
-    step = performance.now(); stage = 'database-counts';
+    step = performance.now(); stage = 'database-analysis';
     // One existing industry-count query covers every Busan dong; the requested region limits results, not score normalization.
-    const areaCounts = await repository.loadIndustryCounts(industry.codes, data.areas);
+    const [areaCounts,contexts] = await Promise.all([
+      repository.loadIndustryCounts(industry.codes,data.areas),
+      repository.loadAreaContexts(data.areas),
+    ]);
     timing.dbQueryMs += Math.round(performance.now() - step);
+    timing.historyQueryMs=contexts.historyQueryMs;
+    timing.changeQueryMs=contexts.changeQueryMs;
     step = performance.now(); stage = 'scoring';
     const candidates = areaCounts.map(row => {
       const dong = { adongCd:Buffer.from(`${row.district_name}|${row.dong_name}`).toString('base64url'), signguNm:row.district_name, adongNm:row.dong_name };
@@ -125,41 +130,38 @@ export async function analyze(input, repository = { loadRecommendationData, load
       candidate.changeContext = null;
       return candidate;
     });
+    for (const row of candidates) {
+      const areaKey=`${row.region}\0${row.name.slice(row.region.length+1)}`;
+      const history=contexts.history.get(areaKey) ?? null;
+      row.historyContext=history;
+      row.marketReferences=[];
+      row.metrics.stability=history?.stability ?? null;
+      row.metrics.growth=history?.growth ?? null;
+      row.metrics.survivalContext=row.metrics.stability;
+      row.provenance.stability=Number.isFinite(row.metrics.stability)?['public.commercial_history_by_dong (행정동 전체 업종 평균 영업기간)']:[];
+      row.provenance.growth=Number.isFinite(row.metrics.growth)?['public.commercial_history_by_dong (행정동 전체 업종 공통 12개월 순증감 비율)']:[];
+      row.notes=['안정성과 성장성은 행정동 전체 업종의 과거 이력 기준입니다.'];
+    }
     const included = new Set(region.areas.map(area=>`${area.district_name}\0${area.dong_name}`));
     const scoped = candidates.filter(row=>included.has(`${row.region}\0${row.name.slice(row.region.length+1)}`));
-    const results = rank(candidates, conditions, scoped);
-    const normalizationBasis = { scope:'부산 전체 행정동', candidateCount:candidates.length,
-      scoredCandidateCount:candidates.filter(row=>row.score!=null).length, method:'5·95백분위' };
-    const preferenceSummary = describePreferences(conditions, results);
-    timing.scoringMs = Math.round(performance.now() - step);
-    step = performance.now(); stage = 'database-context';
-    const selectedAreas = results.map(row => ({district_name:row.region,dong_name:row.name.slice(row.region.length+1)}));
-    const contexts = await repository.loadAreaContexts(selectedAreas);
-    timing.historyQueryMs = contexts.historyQueryMs;
-    timing.changeQueryMs = contexts.changeQueryMs;
-    timing.dbQueryMs += Math.round(performance.now() - step);
-    for (const row of results) {
-      const areaKey = `${row.region}\0${row.name.slice(row.region.length+1)}`;
-      row.historyContext = contexts.history.get(areaKey) ?? null;
-      row.marketReferences = contexts.markets.get(areaKey) ?? [];
-    }
-    const warnings = ['점포 DB에 기준월이 없어 점포 수의 관측 시점을 표시할 수 없습니다.',
-      '상권 변화지표는 행정동 전체의 검증된 생존 지표가 아니므로 안정성 점수에 반영하지 않았습니다.',
-      '점포이력은 최신 사건일이 오래됐고 현재 점포 업종코드와 분류 체계가 달라 동일 업종 개업·폐업 및 성장성 점수를 제외했습니다.'];
+    const results = rank(candidates,conditions,scoped);
+    const normalizationBasis = {scope:'부산 전체 행정동',candidateCount:candidates.length,
+      scoredCandidateCount:candidates.filter(row=>row.score!=null).length,method:'5·95백분위'};
+    const preferenceSummary = describePreferences(conditions,results);
+    timing.scoringMs = Math.round(performance.now()-step);
+    const warnings = ['안정성과 성장성은 행정동 전체 업종의 과거 이력 기준이며 현재 성장률이나 선택 업종만의 평가가 아닙니다.'];
     if (industry.note) warnings.push(industry.note);
     if (region.note) warnings.push(region.note);
     for (const item of preferenceSummary.unsupported) warnings.push(`${item.label} 조건: ${item.reason}`);
-    return { conditions, preferenceSummary, normalizationBasis, resolvedRegion:region.label, matchedIndustry:industry.label, industryCode:industry.filter,
+    return { ...(region.attribution?{regionAttribution:region.attribution}:{}),conditions, preferenceSummary, normalizationBasis, resolvedRegion:region.label, matchedIndustry:industry.label, industryCode:industry.filter,
       results, warnings, analyzedAt:new Date().toISOString(), sources:['Supabase PostgreSQL public.stores (부산 점포)',
-        'public.commercial_history_by_dong (행정동 전체 업종 참고)',
-        'public.commercial_change_by_dong (상권 단위 참고)'], timing };
+        'public.commercial_history_by_dong (행정동 전체 업종·전체 기간)'], timing };
   } catch (error) {
     if (error.requestedIndustry && conditions && !conditions.industry)
       conditions = { ...conditions, industry:error.requestedIndustry };
     if (stage === 'conditions') timing.conditionExtractionMs = Math.round(performance.now() - step);
     if (stage === 'database') timing.dbQueryMs = Math.round(performance.now() - step);
-    if (stage === 'database-counts') timing.dbQueryMs += Math.round(performance.now() - step);
-    if (stage === 'database-context') timing.dbQueryMs += Math.round(performance.now() - step);
+    if (stage === 'database-analysis') timing.dbQueryMs += Math.round(performance.now() - step);
     if (stage === 'scoring') timing.scoringMs = Math.round(performance.now() - step);
     error.timing = timing;
     error.extractedConditions = conditions ?? error.extractedConditions;
@@ -170,6 +172,10 @@ export const server = createServer(async (request, response) => {
   try {
     const requested = new URL(request.url, 'http://localhost').pathname;
     if (requested === '/api/health') return json(response, 200, { ok:true, openaiConfigured:Boolean(process.env.OPENAI_API_KEY), databaseConfigured:Boolean(process.env.DATABASE_URL) });
+    if (requested === '/api/map-config') {
+      response.setHeader('Cache-Control','no-store');
+      return json(response,200,{kakaoJavascriptKey:process.env.KAKAO_JAVASCRIPT_KEY || ''});
+    }
     if (requested === '/api/analyze') {
       if (request.method !== 'POST') return json(response, 405, { error:'POST 요청이 필요합니다.' });
       const started = performance.now();

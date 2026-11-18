@@ -58,15 +58,16 @@ test('기본 점수와 낮은 경쟁 선호는 기존 두 지표만 100%로 배�
   assert(low.every(row=>row.scores.stability===null&&row.scores.growth===null));
 });
 
-test('미지원 안정성·성장성 요청은 지표가 전달되어도 기본 점수를 바꾸지 않는다',()=>{
+test('안정성 선호는 유효한 영업기간 점수의 가중치를 높인다',()=>{
   const make=()=>[
     makeCandidate(dong('a','A'),{count:100},{count:10},industry,null,25),
     makeCandidate(dong('b','B'),{count:200},{count:50},industry,null,75)
   ];
   const base=rank(make(),{competition:'normal',stability:'normal',growth:'normal'});
   const unsupported=rank(make(),{competition:'normal',stability:'important',growth:'important'});
-  assert.deepEqual(unsupported.map(row=>[row.name,row.score,row.effectiveWeights]),
-    base.map(row=>[row.name,row.score,row.effectiveWeights]));
+  assert(unsupported[0].effectiveWeights.stability>base[0].effectiveWeights.stability);
+  assert(unsupported[0].score>base[0].score);
+  assert.equal(Object.values(unsupported[0].effectiveWeights).reduce((sum,value)=>sum+value,0),100);
 });
 
 test('기존의 두 후보 0점·100점은 후보만으로 정규화했을 때 발생한다',()=>{

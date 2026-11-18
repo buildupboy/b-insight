@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { summarizeHistory, historyFromAggregate, loadAreaContexts } from './recommendation-context-db.js';
+import { summarizeHistory, historyFromAggregate, fillHistoryMonths, loadAreaContexts } from './recommendation-context-db.js';
 import { RecommendationDbError } from './recommendation-db.js';
 
 const area={district_name:'사하구',dong_name:'하단1동'};
@@ -95,4 +95,26 @@ test('DB 설정 오류를 명확히 반환한다', async () => {
   delete process.env.DATABASE_URL;
   try { await assert.rejects(()=>loadAreaContexts([area]),RecommendationDbError); }
   finally { if (previous) process.env.DATABASE_URL=previous; }
+});
+
+test('monthly history fills gaps across years and preserves aggregate totals', () => {
+  const monthly=[
+    {...base,month:'2023-02',openings:1,closures:2},
+    {...base,month:'2022-11',openings:3,closures:0},
+  ];
+  const summary={...base,records:5,permit_records:4,closure_records:2,valid_sample:0};
+  const history=historyFromAggregate([summary],[area],monthly).values().next().value;
+  assert.deepEqual(history.eventTrend,[
+    {month:'2022-11',openings:3,closures:0},
+    {month:'2022-12',openings:0,closures:0},
+    {month:'2023-01',openings:0,closures:0},
+    {month:'2023-02',openings:1,closures:2},
+  ]);
+  assert.equal(history.eventTrend.reduce((sum,row)=>sum+row.openings,0),history.permitRecords);
+  assert.equal(history.eventTrend.reduce((sum,row)=>sum+row.closures,0),history.closureRecords);
+  assert.deepEqual(fillHistoryMonths([]),[]);
+  assert.deepEqual(fillHistoryMonths([{month:'2023-02',openings:0,closures:1}]),[{month:'2023-02',openings:0,closures:1}]);
+  const unavailable=historyFromAggregate([], [area]).values().next().value;
+  assert.deepEqual(unavailable.eventTrend,[]);
+  assert.equal(unavailable.permitRecords,null);
 });

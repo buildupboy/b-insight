@@ -7,6 +7,7 @@
     "build": "vite build frontend",
     "test": "node --test backend/*.test.js",
     "diagnose:data": "node --env-file=.env backend/diagnose.js",
+    "prepare:history": "node --env-file=.env backend/prepare-history-summary.js",
     "start": "node --env-file=.env backend/server.js",
     "collect:stores": "node --env-file=.env backend/collect-stores.js",
     "collect:stores:save": "node --env-file=.env backend/collect-stores.js --save"

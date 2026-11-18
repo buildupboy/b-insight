@@ -19,10 +19,12 @@ export function describePreferences(conditions, results) {
     if (hasScore) applied.push(item);
     else exclude(item,'경쟁 지표를 제외하면 비교 가능한 점수가 부족합니다.');
   }
-  if (conditions.stability==='important')
-    exclude(add('stability','안정성'),'행정동·선택 업종·관측 기간이 일치하는 생존 지표가 없습니다.');
-  if (conditions.growth==='important')
-    exclude(add('growth','성장성'),'상권 변화 자료를 행정동·선택 업종의 성장 지표로 검증할 수 없습니다.');
+  for (const [key,label] of [['stability','안정성'],['growth','성장성']]) {
+    if (conditions[key]!=='important') continue;
+    const item=add(key,label);
+    if (hasScore && first.effectiveWeights[key]>0) applied.push(item);
+    else exclude(item,'전체 상권의 과거 이력 또는 비교 가능한 표본이 부족합니다.');
+  }
   const types=conditions.populationTypes?.length?conditions.populationTypes:conditions.populationRequested?['unspecified']:[];
   for (const type of new Set(types)) {
     const label=populationLabels[type];

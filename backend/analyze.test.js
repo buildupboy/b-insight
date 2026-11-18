@@ -119,7 +119,10 @@ test('구·행정동 필터링과 업종 코드 필터링', async () => {
   assert.equal(result.results[0].name, '해운대구 우1동');
   assert.equal(result.results[0].metrics.totalStores, 150);
   assert.equal(result.results[0].metrics.industryStores, 30);
-  await assert.rejects(() => analyze({prompt:'카페',conditions:{...conditions,region:'서면'}}, repository), /확인된 별칭에 연결되지/);
+  const seomyeon=await analyze({prompt:'서면에서 카페를 열고 싶어요. 경쟁이 낮은 곳을 추천해줘.',conditions:{...conditions,region:'서면'}},repository);
+  assert.deepEqual(seomyeon.results.map(row=>row.name).sort(),['부산진구 부전1동','부산진구 부전2동']);
+  assert.equal(seomyeon.conditions.competition,'low');
+  assert(seomyeon.resolvedRegion.includes('서면 일대'));
 });
 
 test('DB 연결 실패를 추천 실패로 전파한다', async () => {
@@ -273,7 +276,7 @@ function dispatch(url, method='GET', data) {
   return new Promise(resolve => {
     const req = Readable.from(data?[JSON.stringify(data)]:[]);
     req.url=url; req.method=method;
-    const response={status:0,writeHead(status){this.status=status;return this;},end(content=''){resolve({status:this.status,content:String(content)});return this;}};
+    const response={status:0,setHeader(){},writeHead(status){this.status=status;return this;},end(content=''){resolve({status:this.status,content:String(content)});return this;}};
     server.emit('request',req,response);
   });
 }
@@ -281,4 +284,81 @@ test('헬스 체크와 잘못된 추천 요청', async () => {
   assert.equal(JSON.parse((await dispatch('/api/health')).content).openaiConfigured, true);
   assert.equal((await dispatch('/api/missing')).status,404);
   assert.equal((await dispatch('/api/analyze','POST',{prompt:''})).status,422);
+});
+
+test('restored all-industry history is shown for selected areas without changing industry scores', async()=>{
+  const input={prompt:'카페',conditions};
+  const baseline=await analyze(input,repository);
+  const restored=await analyze(input,{
+    ...repository,
+    loadAreaContexts:async selectedAreas=>{
+      assert.equal(selectedAreas.length,areas.length);
+      return {history:new Map(selectedAreas.map(area=>[`${area.district_name}\0${area.dong_name}`,{
+        scope:'행정동 전체 업종',averageOperatingMonths:80.8,permitRecords:4253,closureRecords:1985,
+        eventTrend:[{month:'1968-01',openings:1,closures:0},{month:'2023-05',openings:10,closures:5}]
+      }])),markets:new Map(),historyQueryMs:1,changeQueryMs:0};
+    }
+  });
+  assert.deepEqual(restored.results.map(row=>[row.name,row.score,row.scores]),baseline.results.map(row=>[row.name,row.score,row.scores]));
+  assert(restored.results.every(row=>row.historyContext.permitRecords===4253));
+  assert(restored.results.every(row=>row.historyContext.closureRecords===1985));
+  assert(restored.results.every(row=>row.scores.stability===null && row.scores.growth===null));
+});
+
+test('whole-area stability and growth affect ranking before region filtering without hiding lifetime counts',async()=>{
+  const {applyAreaHistoryScores}=await import('./recommendation-context-db.js');
+  const scoredRepository={...repository,loadAreaContexts:async selectedAreas=>{
+    assert.equal(selectedAreas.length,areas.length);
+    const history=new Map(selectedAreas.map((area,i)=>[`${area.district_name}\0${area.dong_name}`,{
+      scope:'행정동 전체 업종',records:100,validSample:10,averageOperatingMonths:20+i*30,
+      permitRecords:1000+i,closureRecords:500+i,eventTrend:[{month:'2023-05',openings:[2,6,9][i],closures:[8,4,1][i]}]
+    }]));
+    return {history:applyAreaHistoryScores(history),markets:new Map(),historyQueryMs:1,changeQueryMs:0};
+  }};
+  const preferences={...conditions,stability:'important',growth:'important'};
+  const city=await analyze({prompt:'카페',conditions:{...preferences,region:'부산 전체'}},scoredRepository);
+  const single=await analyze({prompt:'카페',conditions:{...preferences,region:'해운대구 우1동'}},scoredRepository);
+  const reference=city.results.find(row=>row.name==='해운대구 우1동');
+  assert.deepEqual(single.results[0].scores,reference.scores);
+  assert.equal(single.results[0].score,reference.score);
+  assert.deepEqual(single.results[0].historyContext.growthPeriod,reference.historyContext.growthPeriod);
+  for(const row of city.results) {
+    assert(Number.isFinite(row.scores.stability));
+    assert(Number.isFinite(row.scores.growth));
+    assert(row.effectiveWeights.stability>0);
+    assert(row.effectiveWeights.growth>0);
+    assert.equal(Object.values(row.effectiveWeights).reduce((s,v)=>s+v,0),100);
+    assert(row.historyContext.permitRecords>=1000);
+  }
+  assert.deepEqual(city.preferenceSummary.applied.map(item=>item.key),['lowCompetition','stability','growth']);
+});
+
+test('independent store counts and history load concurrently without changing recommendations',async()=>{
+  let historyStarted=false;
+  const baseline=await analyze({prompt:'카페',conditions},repository);
+  const parallel=await analyze({prompt:'카페',conditions},{
+    ...repository,
+    loadIndustryCounts:async(...args)=>{
+      await Promise.resolve();
+      assert.equal(historyStarted,true);
+      return repository.loadIndustryCounts(...args);
+    },
+    loadAreaContexts:async(...args)=>{
+      historyStarted=true;
+      return repository.loadAreaContexts(...args);
+    },
+  });
+  assert.deepEqual(parallel.results,baseline.results);
+});
+
+test('map config exposes only the browser JavaScript key',async()=>{
+  const previous=process.env.KAKAO_JAVASCRIPT_KEY;
+  process.env.KAKAO_JAVASCRIPT_KEY='fixture-public-javascript-key';
+  try {
+    const response=await dispatch('/api/map-config');
+    assert.equal(response.status,200);
+    assert.deepEqual(JSON.parse(response.content),{kakaoJavascriptKey:'fixture-public-javascript-key'});
+    delete process.env.KAKAO_JAVASCRIPT_KEY;
+    assert.deepEqual(JSON.parse((await dispatch('/api/map-config')).content),{kakaoJavascriptKey:''});
+  }finally{if(previous===undefined)delete process.env.KAKAO_JAVASCRIPT_KEY;else process.env.KAKAO_JAVASCRIPT_KEY=previous;}
 });

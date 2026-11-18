@@ -1,5 +1,6 @@
 import pg from 'pg';
 import { RecommendationDbError } from './recommendation-db.js';
+import { historySampleMinimums } from './history-industry.js';
 
 const options = { connectionTimeoutMillis:8000, query_timeout:15000 };
 const validDate = value => {
@@ -17,9 +18,8 @@ const daysPerMonth = 365.2425/12;
 
 // Group only the requested administrative dongs. The source has no stable
 // business licence ID, so records are deduplicated by their event fields.
-export const historyAggregateSql = `WITH target AS (
-    SELECT * FROM unnest($1::text[], $2::text[]) AS t(district_name,dong_name)
-  ), dedup AS (
+function makeHistoryCteSql(targetSql = 'SELECT * FROM unnest($1::text[], $2::text[]) AS t(district_name,dong_name)', categorySql = '$3::jsonb') {
+  return `WITH target AS (${targetSql}), dedup AS (
     SELECT h.district_name, h.administrative_dong_name,
       btrim(coalesce(h.bplcnm,'')) AS bplcnm,
       btrim(coalesce(h.rdnwhladdr,'')) AS rdnwhladdr,
@@ -33,6 +33,10 @@ export const historyAggregateSql = `WITH target AS (
     FROM public.commercial_history_by_dong h
     JOIN target t ON h.district_name=t.district_name
       AND h.administrative_dong_name=t.dong_name
+    WHERE (${categorySql} IS NULL OR EXISTS (
+      SELECT 1 FROM jsonb_to_recordset(${categorySql}) AS category(majornm text,minornm text,upjongnm text)
+      WHERE btrim(h.majornm)=category.majornm AND btrim(h.minornm)=category.minornm AND btrim(h.upjongnm)=category.upjongnm
+    ))
     GROUP BY 1,2,3,4,5,6,7,8,9,10
   ), normalized AS (
     SELECT *, replace(apvpermymd,'-','') AS permit_text,
@@ -43,18 +47,52 @@ export const historyAggregateSql = `WITH target AS (
       CASE WHEN apvpermymd ~ '^([0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{8})$'
         AND permit_text ~ '^[0-9]{4}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])$'
         AND left(permit_text,4)<>'0000'
-        THEN to_date(permit_text,'YYYYMMDD') END AS parsed_permit,
+        THEN CASE WHEN right(permit_text,2)::int <= extract(day FROM (make_date(left(permit_text,4)::int,substring(permit_text,5,2)::int,1) + interval '1 month - 1 day'))
+          THEN to_date(permit_text,'YYYYMMDD') END END AS parsed_permit,
       CASE WHEN dcbymd ~ '^([0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{8})$'
         AND closure_text ~ '^[0-9]{4}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])$'
         AND left(closure_text,4)<>'0000'
-        THEN to_date(closure_text,'YYYYMMDD') END AS parsed_closure
+        THEN CASE WHEN right(closure_text,2)::int <= extract(day FROM (make_date(left(closure_text,4)::int,substring(closure_text,5,2)::int,1) + interval '1 month - 1 day'))
+          THEN to_date(closure_text,'YYYYMMDD') END END AS parsed_closure
     FROM normalized
   ), valid AS (
     SELECT *,
       CASE WHEN to_char(parsed_permit,'YYYYMMDD')=permit_text THEN parsed_permit END AS permit_date,
       CASE WHEN to_char(parsed_closure,'YYYYMMDD')=closure_text THEN parsed_closure END AS closure_date
     FROM parsed
-  ) SELECT district_name, administrative_dong_name,
+  )`;
+}
+const historyCteSql=makeHistoryCteSql();
+
+const historyEventsCte = `events AS (
+    SELECT district_name, administrative_dong_name, permit_date AS date, 1 AS openings, 0 AS closures
+    FROM valid WHERE permit_date IS NOT NULL
+    UNION ALL
+    SELECT district_name, administrative_dong_name, closure_date AS date, 0 AS openings, 1 AS closures
+    FROM valid WHERE trdstatenm='폐업' AND closure_date IS NOT NULL
+  )`;
+const historyMonthlySelect = `SELECT district_name, administrative_dong_name, to_char(date,'YYYY-MM') AS month,
+      sum(openings)::int AS openings, sum(closures)::int AS closures
+    FROM events GROUP BY district_name,administrative_dong_name,to_char(date,'YYYY-MM')
+    ORDER BY month`;
+export const historyMonthlySql = `${historyCteSql}, ${historyEventsCte} ${historyMonthlySelect}`;
+
+export function fillHistoryMonths(rows) {
+  if (!rows.length) return [];
+  const found = new Map(rows.map(row => [row.month, row]));
+  const months = [...found.keys()].sort();
+  const result = [];
+  const end = months.at(-1);
+  let [year, month] = months[0].split('-').map(Number);
+  for (let current = months[0]; current <= end; current = `${year}-${String(month).padStart(2,'0')}`) {
+    const row = found.get(current);
+    result.push({month:current, openings:Number(row?.openings ?? 0), closures:Number(row?.closures ?? 0)});
+    if (++month > 12) { month = 1; year++; }
+  }
+  return result;
+}
+
+const historyAggregateSelect = `SELECT district_name, administrative_dong_name,
       count(*)::int AS records,
       coalesce(sum(copies-1),0)::int AS duplicate_records,
       count(*) FILTER (WHERE trdstatenm='폐업')::int AS closed_state_records,
@@ -84,14 +122,38 @@ export const historyAggregateSql = `WITH target AS (
       max(greatest(permit_date,CASE WHEN trdstatenm='폐업' THEN closure_date END))::text AS last_observed
     FROM valid GROUP BY district_name,administrative_dong_name`;
 
-export function historyFromAggregate(rows, targets) {
+export const historyAggregateSql = `${historyCteSql} ${historyAggregateSelect}`;
+// Both aggregates share the same deduplicated, validated records in one statement.
+export const historyContextSql = `${historyCteSql}, ${historyEventsCte},
+  area_totals AS (${historyAggregateSelect}),
+  monthly_totals AS (${historyMonthlySelect})
+  SELECT coalesce((SELECT jsonb_agg(t) FROM area_totals t),'[]'::jsonb) AS history_rows,
+    coalesce((SELECT jsonb_agg(m ORDER BY m.month) FROM monthly_totals m),'[]'::jsonb) AS monthly_rows`;
+
+export const historySummaryAvailabilitySql = "SELECT to_regclass('binsight_private.history_summary') IS NOT NULL AS available";
+export const historySummaryReadSql = 'SELECT history_rows,monthly_rows FROM binsight_private.history_summary WHERE id=1 AND schema_version=1';
+export const historySummaryBuildSql = `${makeHistoryCteSql(
+  'SELECT DISTINCT district_name,administrative_dong_name AS dong_name FROM public.commercial_history_by_dong WHERE district_name IS NOT NULL AND administrative_dong_name IS NOT NULL',
+  'NULL::jsonb')}, ${historyEventsCte},
+  area_totals AS (${historyAggregateSelect}), monthly_totals AS (${historyMonthlySelect})
+  SELECT coalesce((SELECT jsonb_agg(t) FROM area_totals t),'[]'::jsonb) AS history_rows,
+    coalesce((SELECT jsonb_agg(m ORDER BY m.month) FROM monthly_totals m),'[]'::jsonb) AS monthly_rows`;
+
+export function historyFromAggregate(rows, targets, monthlyRows = []) {
   const found = new Map(rows.map(row => [key(row.district_name,row.administrative_dong_name),row]));
+  const monthly = new Map();
+  for (const row of monthlyRows) {
+    const areaKey = key(row.district_name,row.administrative_dong_name);
+    if (!monthly.has(areaKey)) monthly.set(areaKey, []);
+    monthly.get(areaKey).push(row);
+  }
   return new Map(targets.map(area => {
     const row = found.get(key(area.district_name,area.dong_name));
     const records = row?.records ?? 0;
     return [key(area.district_name,area.dong_name), {
       scope:'행정동 전체 업종', source:'public.commercial_history_by_dong',
       records, duplicateRecords:row?.duplicate_records ?? 0,
+      eventTrend:fillHistoryMonths(monthly.get(key(area.district_name,area.dong_name)) ?? []),
       closedStateRecords:records ? row.closed_state_records : null,
       permitRecords:records ? row.permit_records : null,
       closureRecords:records ? row.closure_records : null,
@@ -180,45 +242,128 @@ export function summarizeHistory(rows, targets) {
   return grouped;
 }
 
+export function industryHistoryFromAggregate(rows, monthlyRows, areas, mapping) {
+  const history = historyFromAggregate(rows,areas,monthlyRows);
+  const latest = monthlyRows.map(row=>row.month).sort().at(-1) ?? null;
+  const months = [];
+  if (latest) {
+    const [year,month] = latest.split('-').map(Number);
+    for (let offset=11;offset>=0;offset--) months.push(new Date(Date.UTC(year,month-1-offset,1)).toISOString().slice(0,7));
+  }
+  for (const item of history.values()) {
+    item.scope='행정동 동일 업종';
+    item.industryCodes=mapping?.codes ?? [];
+    item.mappingVerified=Boolean(mapping);
+    item.minimumSamples=historySampleMinimums;
+    item.note='동일 업종의 과거 영업기간과 개업·폐업 기록 기준입니다.';
+    item.eventPeriod=latest ? {from:months[0],to:latest,latestObserved:latest} : null;
+    const byMonth=new Map(item.eventTrend.map(row=>[row.month,row]));
+    const trend=months.map(month=>byMonth.get(month) ?? {month,openings:0,closures:0});
+    const hasDates=Boolean(mapping && item.records && item.firstObserved && latest);
+    const openings=trend.reduce((sum,row)=>sum+row.openings,0);
+    const closures=trend.reduce((sum,row)=>sum+row.closures,0);
+    const enoughEvents=hasDates && openings+closures>=historySampleMinimums.growth;
+    item.observedEventTrend=hasDates ? trend : [];
+    item.eventSample=hasDates ? openings+closures : 0;
+    item.periodOpenings=hasDates ? openings : null;
+    item.periodClosures=hasDates ? closures : null;
+    item.eventTrend=enoughEvents ? trend : [];
+    item.growth=enoughEvents ? (openings-closures)/(openings+closures) : null;
+    item.averageOperatingMonths=mapping && item.validSample>=historySampleMinimums.stability ? item.averageOperatingMonths : null;
+    item.stability=item.averageOperatingMonths;
+  }
+  return history;
+}
+
+export function applyAreaHistoryScores(history) {
+  const latest=[...history.values()].flatMap(item=>item.eventTrend.map(row=>row.month)).sort().at(-1);
+  const from=latest ? (()=>{const [year,month]=latest.split('-').map(Number);return new Date(Date.UTC(year,month-12,1)).toISOString().slice(0,7);})() : null;
+  for (const item of history.values()) {
+    const window=item.eventTrend.filter(row=>row.month>=from && row.month<=latest);
+    const openings=window.reduce((sum,row)=>sum+row.openings,0);
+    const closures=window.reduce((sum,row)=>sum+row.closures,0);
+    item.stability=item.validSample>=historySampleMinimums.stability && Number.isFinite(item.averageOperatingMonths) ? item.averageOperatingMonths : null;
+    item.growth=openings+closures>=historySampleMinimums.growth ? (openings-closures)/(openings+closures) : null;
+    item.growthPeriod=latest ? {from,to:latest} : null;
+    item.periodOpenings=latest && item.records ? openings : null;
+    item.periodClosures=latest && item.records ? closures : null;
+    item.note='안정성과 성장성은 행정동 전체 업종의 과거 이력 기준이며 현재 성장률이나 선택 업종만의 평가가 아닙니다.';
+  }
+  return history;
+}
+
+// All-industry history is shared by searches; retain one successful snapshot for five minutes.
+let areaHistoryCache;
+
 export async function loadAreaContexts(areas) {
   if (!areas.length) return {history:new Map(),markets:new Map(),historyQueryMs:0,changeQueryMs:0};
-  if (!process.env.DATABASE_URL) throw new RecommendationDbError('DATABASE_URL이 설정되지 않았습니다.');
-  const districts = areas.map(area => area.district_name);
-  const dongs = areas.map(area => area.dong_name);
-  const client = new pg.Client({connectionString:process.env.DATABASE_URL,...options});
+  const databaseUrl=process.env.DATABASE_URL;
+  if (!databaseUrl) throw new RecommendationDbError('DATABASE_URL이 설정되지 않았습니다.');
+  const areaKey=areas.map(area=>JSON.stringify([area.district_name,area.dong_name])).sort().join('\n');
+  if (areaHistoryCache?.databaseUrl===databaseUrl && areaHistoryCache.areaKey===areaKey) {
+    if (areaHistoryCache.value && Date.now()<areaHistoryCache.expiresAt)
+      return {...areaHistoryCache.value,historyQueryMs:0};
+    if (areaHistoryCache.pending) return areaHistoryCache.pending;
+  }
+  const entry={databaseUrl,areaKey};
+  areaHistoryCache=entry;
+  entry.pending=queryAreaContexts(areas,databaseUrl).then(value=>{
+    entry.value=value;
+    entry.expiresAt=Date.now()+5*60*1000;
+    return value;
+  }).finally(()=>{
+    entry.pending=null;
+    if (!entry.value && areaHistoryCache===entry) areaHistoryCache=undefined;
+  });
+  return entry.pending;
+}
+
+async function queryAreaContexts(areas,databaseUrl) {
+  const client=new pg.Client({connectionString:databaseUrl,...options});
+  let stage='connect';
   try {
     await client.connect();
-    await client.query('BEGIN READ ONLY');
-    let started = performance.now();
-    const historyRows = await client.query(historyAggregateSql,[districts,dongs]);
-    const historyQueryMs = Math.round(performance.now()-started);
-    started = performance.now();
-    const marketRows = await client.query(`SELECT c.district_name, c.administrative_dong_name,
-        c.market_id, c.type_nm, c.comm_nm, c.change_indicator_nm,
-        c.average_open_months, c.average_close_months, c.overlap_pct,
-        c.is_primary, c.source_dataset, c.boundary_reference_date::text AS boundary_reference_date
-      FROM public.commercial_change_by_dong c
-      JOIN unnest($1::text[], $2::text[]) AS target(district_name,dong_name)
-        ON c.district_name = target.district_name AND c.administrative_dong_name = target.dong_name
-      ORDER BY c.is_primary DESC, c.overlap_pct DESC NULLS LAST, c.market_id`,
-      [districts,dongs]);
-    const changeQueryMs = Math.round(performance.now()-started);
+    stage='transaction';
+    await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+    await client.query("SET LOCAL statement_timeout = '14s'");
+    const started=performance.now();
+    stage='summary';
+    const availability=await client.query(historySummaryAvailabilitySql);
+    if (availability.rows[0]?.available) {
+      const prepared=await client.query(historySummaryReadSql);
+      const snapshot=prepared.rows[0];
+      if (snapshot) {
+        const history=applyAreaHistoryScores(historyFromAggregate(snapshot.history_rows,areas,snapshot.monthly_rows));
+        await client.query('ROLLBACK');
+        return {history,markets:new Map(),historyQueryMs:Math.round(performance.now()-started),changeQueryMs:0};
+      }
+    }
+    stage='aggregate';
+    const historyRows=[],monthlyRows=[];
+    for (let offset=0;offset<areas.length;offset+=10) {
+      const batch=areas.slice(offset,offset+10);
+      const parameters=[batch.map(area=>area.district_name),batch.map(area=>area.dong_name),null];
+      const result=await client.query(historyContextSql,parameters);
+      historyRows.push(...result.rows[0].history_rows);
+      monthlyRows.push(...result.rows[0].monthly_rows);
+    }
+    const historyQueryMs=Math.round(performance.now()-started);
     await client.query('ROLLBACK');
-    const markets = new Map(areas.map(area => [key(area.district_name,area.dong_name),[]]));
-    for (const row of marketRows.rows) markets.get(key(row.district_name,row.administrative_dong_name))?.push({
-      marketId:row.market_id, name:row.comm_nm, type:row.type_nm,
-      indicator:row.change_indicator_nm, averageOpenMonths:row.average_open_months == null ? null : Number(row.average_open_months),
-      averageCloseMonths:row.average_close_months == null ? null : Number(row.average_close_months),
-      overlapPct:row.overlap_pct == null ? null : Number(row.overlap_pct),
-      isPrimary:row.is_primary, boundaryReferenceDate:row.boundary_reference_date,
-      sourceDataset:row.source_dataset, scope:'상권 단위 · 전체 업종'
-    });
-    return {history:historyFromAggregate(historyRows.rows,areas),markets,historyQueryMs,changeQueryMs};
+    return {history:applyAreaHistoryScores(historyFromAggregate(historyRows,areas,monthlyRows)),markets:new Map(),historyQueryMs,changeQueryMs:0};
   } catch (error) {
-    await client.query('ROLLBACK').catch(() => {});
+    await client.query('ROLLBACK').catch(()=>{});
     if (error instanceof RecommendationDbError) throw error;
-    throw new RecommendationDbError('Supabase 이력·상권 변화 데이터를 조회할 수 없습니다.');
-  } finally {
-    await client.end().catch(() => {});
-  }
+    const timeout=error.code==='57014' || /timeout/i.test(error.message ?? '');
+    const code=timeout?'TIMEOUT':/^[A-Z0-9]{5,20}$/.test(error.code ?? '')?error.code:'UNKNOWN';
+    console.error(JSON.stringify({event:'history_query_failed',stage,code,areaCount:areas.length}));
+    const message=timeout?'점포이력 집계 시간이 초과되었습니다.':
+      ['ENOTFOUND','EAI_AGAIN'].includes(code)?'Supabase DB 주소를 찾을 수 없습니다.':
+      ['ECONNREFUSED','ECONNRESET','ETIMEDOUT'].includes(code)?'Supabase DB에 연결할 수 없습니다.':
+      code==='28P01'?'Supabase DB 인증에 실패했습니다.':
+      ['42P01','42703'].includes(code)?'점포이력 테이블 또는 컬럼을 확인해 주세요.':
+      'Supabase 점포이력 조회에 실패했습니다.';
+    const failure=new RecommendationDbError(`${message} (오류 코드: ${code})`);
+    failure.code=code;
+    throw failure;
+  } finally { await client.end().catch(()=>{}); }
 }
