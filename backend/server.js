@@ -114,7 +114,8 @@ export async function analyze(input, repository = { loadRecommendationData, load
     if (industryResolution.recovered || input.industryChoice)
       conditions = { ...conditions, industry:industryResolution.requested };
     step = performance.now(); stage = 'database-counts';
-    const areaCounts = await repository.loadIndustryCounts(industry.codes, region.areas);
+    // One existing industry-count query covers every Busan dong; the requested region limits results, not score normalization.
+    const areaCounts = await repository.loadIndustryCounts(industry.codes, data.areas);
     timing.dbQueryMs += Math.round(performance.now() - step);
     step = performance.now(); stage = 'scoring';
     const candidates = areaCounts.map(row => {
@@ -124,7 +125,11 @@ export async function analyze(input, repository = { loadRecommendationData, load
       candidate.changeContext = null;
       return candidate;
     });
-    const results = rank(candidates, conditions);
+    const included = new Set(region.areas.map(area=>`${area.district_name}\0${area.dong_name}`));
+    const scoped = candidates.filter(row=>included.has(`${row.region}\0${row.name.slice(row.region.length+1)}`));
+    const results = rank(candidates, conditions, scoped);
+    const normalizationBasis = { scope:'부산 전체 행정동', candidateCount:candidates.length,
+      scoredCandidateCount:candidates.filter(row=>row.score!=null).length, method:'5·95백분위' };
     const preferenceSummary = describePreferences(conditions, results);
     timing.scoringMs = Math.round(performance.now() - step);
     step = performance.now(); stage = 'database-context';
@@ -144,8 +149,7 @@ export async function analyze(input, repository = { loadRecommendationData, load
     if (industry.note) warnings.push(industry.note);
     if (region.note) warnings.push(region.note);
     for (const item of preferenceSummary.unsupported) warnings.push(`${item.label} 조건: ${item.reason}`);
-    if (region.scope === 'dong') warnings.push('행정동 한 곳의 점포 수는 표시하지만 상대평가 점수는 계산할 수 없습니다.');
-    return { conditions, preferenceSummary, resolvedRegion:region.label, matchedIndustry:industry.label, industryCode:industry.filter,
+    return { conditions, preferenceSummary, normalizationBasis, resolvedRegion:region.label, matchedIndustry:industry.label, industryCode:industry.filter,
       results, warnings, analyzedAt:new Date().toISOString(), sources:['Supabase PostgreSQL public.stores (부산 점포)',
         'public.commercial_history_by_dong (행정동 전체 업종 참고)',
         'public.commercial_change_by_dong (상권 단위 참고)'], timing };

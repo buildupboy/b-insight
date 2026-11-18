@@ -69,7 +69,7 @@ test('미지원 안정성·성장성 요청은 지표가 전달되어도 기본 
     base.map(row=>[row.name,row.score,row.effectiveWeights]));
 });
 
-test('후보 둘의 0점·100점은 상대 정규화 결과이며 검색 범위에 따라 달라진다',()=>{
+test('기존의 두 후보 0점·100점은 후보만으로 정규화했을 때 발생한다',()=>{
   const a=()=>makeCandidate(dong('a','A'),{count:100},{count:30},industry);
   const b=()=>makeCandidate(dong('b','B'),{count:200},{count:20},industry);
   const c=()=>makeCandidate(dong('c','C'),{count:400},{count:60},industry);
@@ -80,4 +80,40 @@ test('후보 둘의 0점·100점은 상대 정규화 결과이며 검색 범위�
   assert.equal(rank([a()],{competition:'normal'})[0].score,null);
   const tied=rank([a(),a()],{competition:'normal'});
   assert(tied.every(row=>row.score===null));
+});
+
+test('공통 업종 모집단으로 정규화하면 두 동과 단일 동도 검색 범위에 무관하게 같은 점수다',()=>{
+  const make=()=>[
+    makeCandidate(dong('h1','하단1동'),{count:854},{count:52},industry),
+    makeCandidate(dong('h2','하단2동'),{count:1586},{count:86},industry),
+    makeCandidate(dong('d','다대1동'),{count:200},{count:0},industry),
+    makeCandidate(dong('b','부전2동'),{count:4174},{count:147},industry)
+  ];
+  const conditions={competition:'normal'};
+  const all=make();
+  rank(all,conditions);
+  const reference=make();
+  const pair=rank(reference,conditions,reference.slice(0,2));
+  const oneReference=make();
+  const one=rank(oneReference,conditions,[oneReference[1]]);
+  for(const row of [...pair,...one]) {
+    const baseline=all.find(candidate=>candidate.name===row.name);
+    assert.equal(row.score,baseline.score);
+    assert.deepEqual(row.scores,baseline.scores);
+    assert.deepEqual(row.effectiveWeights,baseline.effectiveWeights);
+  }
+  assert(pair.every(row=>row.score>0&&row.score<100));
+  assert.equal(one.length,1);
+  assert.equal(one[0].scoreUnavailableReason,null);
+  assert.equal(reference[2].metrics.industryStores,0);
+  assert(Number.isFinite(reference[2].scores.competition));
+});
+
+test('전체 모집단에서 동률·누락 지표는 임의 점수를 만들지 않는다',()=>{
+  const make=(id,total,selected)=>makeCandidate(dong(id,id),{count:total},{count:selected},industry);
+  const tied=[make('a',100,10),make('b',100,10),make('c',100,10)];
+  assert(rank(tied,{competition:'normal'}).every(row=>row.score===null));
+  const missing=[make('a',100,10),make('b',200,20),make('bad',100,101)];
+  rank(missing,{competition:'normal'});
+  assert.equal(missing.find(row=>row.name==='부산진구 bad').score,null);
 });

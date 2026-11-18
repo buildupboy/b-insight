@@ -102,6 +102,7 @@ export default function AreaDetail({area,rank,result}) {
         <h2>추천 이유</h2>
         <p>{area.score==null?area.scoreUnavailableReason:`이 후보는 ${Object.entries(area.effectiveWeights).map(([key,weight])=>`${scoreLabels[key]} ${shown(scores[key])}점(가중치 ${weight}%)`).join(', ')}을 반영해 ${shown(area.score)}점을 받았습니다.`}</p>
         <div className="detail-caution"><strong>주의할 점</strong>
+          {result.normalizationBasis&&<p>{result.normalizationBasis.scope} {shown(result.normalizationBasis.candidateCount)}곳을 공통 기준으로 계산한 비교 지수입니다. 0점은 창업 불가, 100점은 성공 보장을 뜻하지 않습니다.</p>}
           {metrics.competition!=null&&<p>전체 점포 중 {industry} 비중은 {percent(metrics.competition)}입니다.</p>}
           <p>{historyContext?.note||'이력 자료가 없어 개업·폐업·평균 영업기간을 산출할 수 없습니다.'}</p>
           {historyContext?.records>0&&<p>평균 영업기간: 폐업 상태 {shown(historyContext.closedStateRecords)}건 중 {shown(historyContext.excludedSampleRecords)}건 제외. 사유별로 인허가일 누락 {shown(historyContext.exclusions.missingPermit)}건, 날짜 오류 {shown(historyContext.exclusions.invalidPermit)}건, 폐업일 누락 {shown(historyContext.exclusions.missingClosure)}건, 날짜 오류 {shown(historyContext.exclusions.invalidClosure)}건, 날짜 역전 {shown(historyContext.exclusions.reversedDates)}건입니다. 한 기록에 여러 사유가 겹칠 수 있습니다.</p>}

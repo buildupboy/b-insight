@@ -36,7 +36,8 @@ export function makeCandidate(dong, all, filtered, industry, events=null, surviv
       !countEvents&&(events?.reason||'개업·폐업 자료를 확인할 수 없습니다.')].filter(Boolean)
   };
 }
-export function rank(rows, conditions) {
+export function rank(rows, conditions, eligibleRows=rows) {
+  // Normalize against the full industry-wide Busan reference, then rank only the requested area.
   // Fit measures comparative commercial activity, not rent or consumer demand.
   normalize(rows,'activity'); normalize(rows,'competition',true); normalize(rows,'stability'); normalize(rows,'growth');
   const base={fit:30,competition:conditions.competition==='any'?0:conditions.competition==='low'?40:25,stability:25,growth:20};
@@ -55,5 +56,5 @@ export function rank(rows, conditions) {
     row.scoreUnavailableReason=row.score===null?(rows.length<2?'비교 대상 행정동이 하나여서 상대평가 점수를 계산할 수 없습니다.':'비교 가능한 점수 지표가 두 개 미만입니다.'):null;
     row.verdict=row.score===null?'상대평가 불가':row.score>=80?'추천':row.score>=60?'추천 후보':'비교 필요';
   }
-  return rows.sort((a,b)=>(b.score??-1)-(a.score??-1)||(b.metrics.totalStores??-1)-(a.metrics.totalStores??-1)).slice(0,3);
+  return eligibleRows.sort((a,b)=>(b.score??-1)-(a.score??-1)||(b.metrics.totalStores??-1)-(a.metrics.totalStores??-1)).slice(0,3);
 }

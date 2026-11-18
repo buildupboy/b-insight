@@ -108,7 +108,7 @@ test('DB 집계로 기존 응답 구조를 유지하며 공공 API를 호출하�
     assert(result.results.every(row => row.score !== null && row.scores.stability === null && row.scores.growth === null));
     assert(result.results.every(row => row.metrics.openings === null && row.metrics.survivalContext === null));
     assert.deepEqual(result.results.map(row => row.metrics.industryStores).sort((a,b)=>a-b), [10,30]);
-    assert.deepEqual(Object.keys(result).sort(), ['analyzedAt','conditions','industryCode','matchedIndustry','preferenceSummary','resolvedRegion','results','sources','timing','warnings']);
+    assert.deepEqual(Object.keys(result).sort(), ['analyzedAt','conditions','industryCode','matchedIndustry','normalizationBasis','preferenceSummary','resolvedRegion','results','sources','timing','warnings']);
     assert(result.sources[0].includes('public.stores'));
   } finally { globalThis.fetch = oldFetch; }
 });
@@ -220,8 +220,53 @@ test('검증된 복수 행정동은 선택지를 반환하고 선택 후 단일 
   const chosen=await analyze({...request,regionChoice:'사하구 하단1동'},hadanRepository);
   assert.equal(chosen.results.length,1);
   assert.equal(chosen.results[0].metrics.industryStores,52);
-  assert.equal(chosen.results[0].score,null);
-  assert.match(chosen.results[0].scoreUnavailableReason,/비교 대상/);
+  assert.equal(chosen.results[0].score,combined.results.find(row=>row.name==='사하구 하단1동').score);
+  assert.deepEqual(chosen.results[0].scores,combined.results.find(row=>row.name==='사하구 하단1동').scores);
+  assert.equal(chosen.normalizationBasis.candidateCount,2);
+});
+
+test('지역 범위가 달라도 같은 동의 공통 기준 점수와 이력은 같다', async () => {
+  const fullAreas=[
+    {district_name:'사하구',dong_name:'하단1동',total:854},
+    {district_name:'사하구',dong_name:'하단2동',total:1586},
+    {district_name:'사하구',dong_name:'다대1동',total:200},
+    {district_name:'부산진구',dong_name:'부전2동',total:4174}
+  ];
+  let countQueries=0;
+  const fullRepository={
+    loadRecommendationData:async()=>({coverage:{total:6814,unmapped:0},areas:fullAreas,
+      industries:[{industry_code:'S20701',industry_name:'미용실'}]}),
+    loadIndustryCounts:async(codes,referenceAreas)=>{
+      countQueries++;
+      assert.deepEqual(codes,['S20701']);
+      assert.deepEqual(referenceAreas,fullAreas);
+      const selected={'하단1동':52,'하단2동':86,'다대1동':0,'부전2동':147};
+      return referenceAreas.map(row=>({...row,selected:selected[row.dong_name]}));
+    },
+    loadAreaContexts:async chosen=>({history:new Map(chosen.map(row=>[
+      `${row.district_name}\0${row.dong_name}`,{permitRecords:7,closureRecords:5,averageOperatingMonths:42,validSample:3}
+    ])),markets:new Map(),historyQueryMs:1,changeQueryMs:1})
+  };
+  const query=region=>analyze({prompt:'미용실 창업',conditions:{industry:'미용실',region}},fullRepository);
+  const pair=await query('하단동');
+  const district=await query('사하구');
+  const one=await query('사하구 하단2동');
+  const city=await query('부산 전체');
+  const get=(result,name)=>result.results.find(row=>row.name===name);
+  for(const result of [pair,district,one,city]) {
+    assert.deepEqual(result.normalizationBasis,{scope:'부산 전체 행정동',candidateCount:4,scoredCandidateCount:4,method:'5·95백분위'});
+    assert.equal(result.results.length<=3,true);
+  }
+  for(const result of [district,one,city]) {
+    const area=get(result,'사하구 하단2동');
+    assert(area);
+    assert.deepEqual([area.score,area.scores,area.effectiveWeights,area.historyContext],
+      [get(pair,'사하구 하단2동').score,get(pair,'사하구 하단2동').scores,
+        get(pair,'사하구 하단2동').effectiveWeights,get(pair,'사하구 하단2동').historyContext]);
+  }
+  assert.equal(countQueries,4);
+  assert(pair.results.every(row=>row.name.startsWith('사하구 하단')));
+  assert(one.results.length===1&&one.results[0].score!==null);
 });
 
 function dispatch(url, method='GET', data) {
