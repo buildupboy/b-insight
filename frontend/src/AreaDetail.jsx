@@ -19,7 +19,7 @@ export function recommendationReason(area,industry) {
 const operatingMonths=value=>value==null?'데이터 부족':`${Number(value).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1})}개월`;
 const percent=value=>value==null?'데이터 부족':`${(value*100).toLocaleString('ko-KR',{maximumFractionDigits:1})}%`;
 
-export default function AreaDetail({area,rank,result}) {
+export default function AreaDetail({area,rank,result,backHref='#results',backLabel='추천 결과'}) {
   const {metrics,scores,historyContext}=area;
   const industry=result.matchedIndustry||result.conditions.industry;
   const dong=area.region&&area.name.startsWith(`${area.region} `)?area.name.slice(area.region.length+1):area.name;
@@ -27,10 +27,10 @@ export default function AreaDetail({area,rank,result}) {
   const assets='/figma-assets/detail-';
 
   return <section className="area-detail" id={`area-${area.id}`} aria-labelledby="area-detail-title">
-    <a className="back-link" href="#results">← 추천 결과</a>
+    <a className="back-link" href={backHref}>← {backLabel}</a>
     <section className="panel detail-overview">
       <div className="detail-identity">
-        <span className="tag blue">{area.score==null?'상대평가 불가':`${rank}위 추천`}</span>
+        <span className="tag blue">{area.score==null?'상대평가 불가':rank==null?'상권 상세':`${rank}위 추천`}</span>
         <h1 id="area-detail-title" tabIndex={-1}>{dong} 상권</h1>
         <p>{[area.region,`${industry} 기준 분석`].filter(Boolean).join(' · ')}</p>
         {result.regionAttribution&&<a className="source-note" href={result.regionAttribution.url} target="_blank" rel="noreferrer">{result.regionAttribution.label}</a>}

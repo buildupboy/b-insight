@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import AreaDetail, { scoreLabels, shown, recommendationReason } from './AreaDetail.jsx';
 import {kakaoSearchUrl} from './kakao-map.mjs';
+import CommercialMap from './CommercialMap.jsx';
 
 const examples=['부산진구에서 카페를 열고 싶어요. 경쟁이 낮은 곳을 추천해줘.','해운대구에서 미용실 창업을 고민 중이야.'];
 const operatingMonths=value=>value==null?'데이터 부족':`${Number(value).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1})}개월`;
@@ -10,6 +11,8 @@ export default function App() {
   const [prompt,setPrompt]=useState(''),[result,setResult]=useState(null),[conditions,setConditions]=useState(defaults);
   const [loading,setLoading]=useState(false),[error,setError]=useState(''),[choices,setChoices]=useState([]),[choiceType,setChoiceType]=useState(null),[pendingConditions,setPendingConditions]=useState(null);
   const [hash,setHash]=useState(()=>window.location.hash);
+  const [mapConditions,setMapConditions]=useState(null),[detailFromMap,setDetailFromMap]=useState(false);
+  const isMap=hash==='#map';
   const loadingDialog=useRef(null);
   const errorNotice=useRef(null);
   const lastArea=useRef(null);
@@ -40,6 +43,18 @@ export default function App() {
     if (error) errorNotice.current?.scrollIntoView({block:'nearest'});
   },[error]);
   const edit=(field,value)=>setConditions(current=>({...current,[field]:value}));
+  async function openMapDetail(area,mapData) {
+    setLoading(true);setError('');
+    try {
+      const response=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(75000),
+        body:JSON.stringify({prompt:`${area.name} ${mapData.matchedIndustry}`,conditions:{...mapData.conditions,region:area.name}})});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'상권 상세 정보를 불러오지 못했습니다.');
+      setResult(data);setConditions(data.conditions);setDetailFromMap(true);
+      window.location.hash=`area-${area.id}`;
+    }catch(reason){setError(reason.message);}
+    finally{setLoading(false);}
+  }
   async function analyze(event,revise=false,selection=null) {
     event?.preventDefault();
     if (!prompt.trim()||loading) return;
@@ -51,16 +66,16 @@ export default function App() {
       if (!response.headers.get('Content-Type')?.includes('application/json')) throw new Error('분석 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
       const data=await response.json();
       if (!response.ok) {setChoices(data.choices||[]);setChoiceType(data.choiceType||null);setPendingConditions(data.conditions||null);throw new Error(data.error||'분석에 실패했습니다.');}
-      setResult(data);setConditions(data.conditions);setPendingConditions(null);window.scrollTo({top:0,behavior:'smooth'});
+      setResult(data);setConditions(data.conditions);setPendingConditions(null);setDetailFromMap(false);window.scrollTo({top:0,behavior:'smooth'});
     } catch(reason) {
       setError(reason.name==='TimeoutError'?'분석 응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요.':reason.message);
     } finally {setLoading(false);}
   }
   return <>
     <header className="topbar"><div className="brand"><span className="brand-mark" aria-hidden="true"><i/><i/></span>B-Insight</div>
-      <nav aria-label="주 메뉴"><a className="active" href="#analysis">상권 분석</a><a href="#results">상권 지도</a><a href="#results">상권 비교</a><a href="#results">보관함</a></nav><div className="user"><div className="avatar">U</div></div></header>
-    <main className={result?'results-layout':''} id="analysis">
-      {selectedArea?<AreaDetail area={selectedArea} rank={selectedIndex+1} result={result}/>:!result?<><h1>어떤 창업을 준비하고 계신가요?</h1>
+      <nav aria-label="주 메뉴"><a className={!isMap?'active':''} href="#analysis" onClick={()=>{setResult(null);setError('');}}>상권 분석</a><a className={isMap?'active':''} href="#map" onClick={()=>setError('')}>상권 지도</a><a href="#results">상권 비교</a><a href="#results">보관함</a></nav><div className="user"><div className="avatar">U</div></div></header>
+    <main className={isMap?'map-page-layout':result?'results-layout':''} id="analysis">
+      {isMap?<CommercialMap initialConditions={mapConditions||result?.conditions} onConditionsChange={setMapConditions} onOpenDetail={openMapDetail}/>:selectedArea?<AreaDetail area={selectedArea} rank={detailFromMap?null:selectedIndex+1} result={result} backHref={detailFromMap?'#map':'#results'} backLabel={detailFromMap?'상권 지도':'추천 결과'}/>:!result?<><h1>어떤 창업을 준비하고 계신가요?</h1>
         <form className="panel input-panel" onSubmit={analyze}><label className="label" htmlFor="prompt">창업 조건</label>
           <textarea id="prompt" required maxLength={2000} value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder="자유롭게 이야기해 보세요!"/>
           <div className="assist-row"><span className="assist">입력하신 창업 조건을 AI가 한 번에 분석해요</span><button className="primary" type="submit">AI 상권 분석하기</button></div>

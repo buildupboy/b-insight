@@ -93,7 +93,7 @@ async function readBody(request) {
   for await (const chunk of request) { value += chunk; if (value.length > 12000) throw new InputError('입력 크기를 줄여 주세요.'); }
   try { return JSON.parse(value); } catch { throw new InputError('요청 형식이 올바르지 않습니다.'); }
 }
-export async function analyze(input, repository = { loadRecommendationData, loadIndustryCounts, loadAreaContexts }) {
+export async function analyze(input, repository = { loadRecommendationData, loadIndustryCounts, loadAreaContexts }, resultLimit=3) {
   const timing = { conditionExtractionMs:null, dbQueryMs:null, historyQueryMs:null, changeQueryMs:null, scoringMs:null, serverTotalMs:null };
   let conditions;
   let step = performance.now(), stage = 'conditions';
@@ -144,7 +144,7 @@ export async function analyze(input, repository = { loadRecommendationData, load
     }
     const included = new Set(region.areas.map(area=>`${area.district_name}\0${area.dong_name}`));
     const scoped = candidates.filter(row=>included.has(`${row.region}\0${row.name.slice(row.region.length+1)}`));
-    const results = rank(candidates,conditions,scoped);
+    const results = rank(candidates,conditions,scoped,resultLimit);
     const normalizationBasis = {scope:'부산 전체 행정동',candidateCount:candidates.length,
       scoredCandidateCount:candidates.filter(row=>row.score!=null).length,method:'5·95백분위'};
     const preferenceSummary = describePreferences(conditions,results);
@@ -168,6 +168,26 @@ export async function analyze(input, repository = { loadRecommendationData, load
     throw error;
   }
 }
+export async function analyzeMap(input,repository={loadRecommendationData,loadIndustryCounts,loadAreaContexts}) {
+  if(!input || typeof input!=='object' || Array.isArray(input))throw new InputError('지도 검색 조건을 확인해 주세요.');
+  const conditions=validate({industry:input.industry ?? '카페',region:input.region ?? '부산진구',
+    competition:input.competition ?? 'normal',stability:input.stability ?? 'normal',growth:input.growth ?? 'normal'});
+  const data=await repository.loadRecommendationData();
+  const scope=await resolveRegion(conditions.region,data.areas);
+  const analysis=await analyze({prompt:'상권 지도',conditions:{...conditions,region:'부산 전체'}},
+    {...repository,loadRecommendationData:async()=>data},data.areas.length);
+  const visible=new Set(scope.areas.map(area=>`${area.district_name}\0${area.dong_name}`));
+  return {conditions,resolvedRegion:scope.label,matchedIndustry:analysis.matchedIndustry,
+    industries:[...new Set(data.industries.map(row=>row.industry_name))].sort((a,b)=>a.localeCompare(b,'ko')),
+    districts:[...new Set(data.areas.map(row=>row.district_name))].sort((a,b)=>a.localeCompare(b,'ko')),
+    visibleIds:analysis.results.filter(row=>visible.has(`${row.region}\0${row.name.slice(row.region.length+1)}`)).map(row=>row.id),
+    areas:analysis.results.map(row=>({id:row.id,name:row.name,region:row.region,score:row.score,verdict:row.verdict,
+      scores:row.scores,effectiveWeights:row.effectiveWeights,metrics:row.metrics,
+      historyContext:row.historyContext?{averageOperatingMonths:row.historyContext.averageOperatingMonths,
+        permitRecords:row.historyContext.permitRecords,closureRecords:row.historyContext.closureRecords}:null})),
+    ...(scope.attribution?{regionAttribution:scope.attribution}:{})};
+}
+
 export const server = createServer(async (request, response) => {
   try {
     const requested = new URL(request.url, 'http://localhost').pathname;
@@ -175,6 +195,13 @@ export const server = createServer(async (request, response) => {
     if (requested === '/api/map-config') {
       response.setHeader('Cache-Control','no-store');
       return json(response,200,{kakaoJavascriptKey:process.env.KAKAO_JAVASCRIPT_KEY || ''});
+    }
+    if (requested === '/api/map-data') {
+      if(request.method!=='POST')return json(response,405,{error:'POST 요청이 필요합니다.'});
+      try {return json(response,200,await analyzeMap(await readBody(request)));}
+      catch(error){return json(response,error instanceof InputError?422:502,{
+        error:error instanceof InputError || error instanceof RecommendationDbError?error.message:'상권 지도 데이터를 조회할 수 없습니다.',
+        choices:error.choices ?? [],choiceType:error.choiceType ?? null});}
     }
     if (requested === '/api/analyze') {
       if (request.method !== 'POST') return json(response, 405, { error:'POST 요청이 필요합니다.' });

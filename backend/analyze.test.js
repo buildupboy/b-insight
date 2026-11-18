@@ -362,3 +362,22 @@ test('map config exposes only the browser JavaScript key',async()=>{
     assert.deepEqual(JSON.parse((await dispatch('/api/map-config')).content),{kakaoJavascriptKey:''});
   }finally{if(previous===undefined)delete process.env.KAKAO_JAVASCRIPT_KEY;else process.env.KAKAO_JAVASCRIPT_KEY=previous;}
 });
+
+test('map returns all real area scores and scope IDs without truncating at three or returning full trends',async()=>{
+  const {analyzeMap}=await import('./server.js');
+  const moreAreas=[...areas,{district_name:'부산진구',dong_name:'전포1동',total:300},{district_name:'부산진구',dong_name:'전포2동',total:350}];
+  const mapRepository={...repository,loadRecommendationData:async()=>({coverage:{total:1100,unmapped:0},areas:moreAreas,
+    industries:[{industry_code:'I21201',industry_name:'카페'}]})};
+  const result=await analyzeMap({region:'서면',industry:'카페',competition:'low'},mapRepository);
+  assert.equal(result.areas.length,5);
+  assert.equal(result.visibleIds.length,4);
+  assert(result.areas.every(row=>row.historyContext==null || !('eventTrend' in row.historyContext)));
+  assert.equal(result.conditions.competition,'low');
+  assert(result.resolvedRegion.includes('서면'));
+  const analysis=await analyze({prompt:'카페',conditions:{...conditions,region:'부산 전체',stability:'normal'}},mapRepository);
+  for(const row of analysis.results)assert.equal(row.score,result.areas.find(area=>area.id===row.id).score);
+  assert.deepEqual(result.industries,['카페']);
+  assert.deepEqual(result.districts,['부산진구','해운대구']);
+  assert.equal((await dispatch('/api/map-data')).status,405);
+  assert.equal((await dispatch('/api/map-data','POST',{industry:''})).status,422);
+});
