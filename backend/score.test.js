@@ -42,3 +42,42 @@ test('stale event history remains visible but is excluded from growth scoring',(
   assert.equal(candidate.metrics.growth,null);
   assert.equal(candidate.metrics.historyRecords,12);
 });
+
+test('기본 점수와 낮은 경쟁 선호는 기존 두 지표만 100%로 배분한다',()=>{
+  const make=()=>[
+    makeCandidate(dong('a','A'),{count:100},{count:10},industry),
+    makeCandidate(dong('b','B'),{count:200},{count:50},industry)
+  ];
+  const normal=rank(make(),{competition:'normal',stability:'normal',growth:'normal'});
+  const low=rank(make(),{competition:'low',stability:'important',growth:'important'});
+  assert.deepEqual(normal.map(row=>[row.name,row.score]),[['부산진구 B',55],['부산진구 A',45]]);
+  assert.deepEqual(low.map(row=>[row.name,row.score]),[['부산진구 A',57],['부산진구 B',43]]);
+  assert.deepEqual(normal[0].effectiveWeights,{fit:55,competition:45});
+  assert.deepEqual(low[0].effectiveWeights,{fit:43,competition:57});
+  assert.equal(Object.values(low[0].effectiveWeights).reduce((a,b)=>a+b,0),100);
+  assert(low.every(row=>row.scores.stability===null&&row.scores.growth===null));
+});
+
+test('미지원 안정성·성장성 요청은 지표가 전달되어도 기본 점수를 바꾸지 않는다',()=>{
+  const make=()=>[
+    makeCandidate(dong('a','A'),{count:100},{count:10},industry,null,25),
+    makeCandidate(dong('b','B'),{count:200},{count:50},industry,null,75)
+  ];
+  const base=rank(make(),{competition:'normal',stability:'normal',growth:'normal'});
+  const unsupported=rank(make(),{competition:'normal',stability:'important',growth:'important'});
+  assert.deepEqual(unsupported.map(row=>[row.name,row.score,row.effectiveWeights]),
+    base.map(row=>[row.name,row.score,row.effectiveWeights]));
+});
+
+test('후보 둘의 0점·100점은 상대 정규화 결과이며 검색 범위에 따라 달라진다',()=>{
+  const a=()=>makeCandidate(dong('a','A'),{count:100},{count:30},industry);
+  const b=()=>makeCandidate(dong('b','B'),{count:200},{count:20},industry);
+  const c=()=>makeCandidate(dong('c','C'),{count:400},{count:60},industry);
+  const pair=rank([a(),b()],{competition:'normal'});
+  assert.deepEqual(pair.map(row=>[row.name,row.score]),[['부산진구 B',100],['부산진구 A',0]]);
+  const wider=rank([a(),b(),c()],{competition:'normal'});
+  assert.notEqual(wider.find(row=>row.name==='부산진구 B').score,100);
+  assert.equal(rank([a()],{competition:'normal'})[0].score,null);
+  const tied=rank([a(),a()],{competition:'normal'});
+  assert(tied.every(row=>row.score===null));
+});

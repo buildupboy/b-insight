@@ -39,7 +39,7 @@ export function makeCandidate(dong, all, filtered, industry, events=null, surviv
 export function rank(rows, conditions) {
   // Fit measures comparative commercial activity, not rent or consumer demand.
   normalize(rows,'activity'); normalize(rows,'competition',true); normalize(rows,'stability'); normalize(rows,'growth');
-  const base={fit:30,competition:conditions.competition==='any'?0:conditions.competition==='low'?40:25,stability:conditions.stability==='important'?40:25,growth:conditions.growth==='important'?35:20};
+  const base={fit:30,competition:conditions.competition==='any'?0:conditions.competition==='low'?40:25,stability:25,growth:20};
   for (const row of rows) {
     row.scores.fit=row.scores.activity;
     delete row.scores.activity;

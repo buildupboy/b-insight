@@ -4,7 +4,7 @@ import AreaDetail, { scoreLabels, shown } from './AreaDetail.jsx';
 const examples=['부산진구에서 카페를 열고 싶어요. 경쟁이 낮은 곳을 추천해줘.','해운대구에서 미용실 창업을 고민 중이야.'];
 const historyBasis=(area,type)=>{const h=area.historyContext;if(!h?.records)return '점포이력 DB · 행정동 전체 업종 이력 없음';const period=type==='permit'?h.permitPeriod:h.closurePeriod;return `점포이력 DB · 행정동 전체 업종 · ${type==='permit'?'인허가일 기준':'폐업 상태·폐업일 기준'} · ${period?.from?`${period.from} ~ ${period.to}`:'유효 날짜 없음'} · 점수 미반영`;};
 const operatingMonths=value=>value==null?'산출 불가':`${Number(value).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1})}개월`;
-const defaults={industry:'',region:'부산 전체',competition:'normal',stability:'normal',growth:'normal',populationRequested:false,budget:null};
+const defaults={industry:'',region:'부산 전체',competition:'normal',stability:'normal',growth:'normal',populationRequested:false,populationTypes:[],budget:null};
 
 export default function App() {
   const [prompt,setPrompt]=useState(''),[result,setResult]=useState(null),[conditions,setConditions]=useState(defaults);
@@ -76,6 +76,7 @@ export default function App() {
         <h1>추천 창업 상권</h1>
         {elapsedMs!=null&&<p className="source-note">분석 완료 · 소요 시간 {(elapsedMs/1000).toFixed(1)}초</p>}
         <div className="chips result-filters"><span className="tag">업종 · {result.matchedIndustry||conditions.industry}</span><span className="tag">지역 · {result.resolvedRegion||conditions.region}</span></div>
+        {result.preferenceSummary?.recognized.length>0&&<p className="source-note">{result.preferenceSummary.applied.length>0?`적용 조건: ${result.preferenceSummary.applied.map(item=>item.label).join(', ')}`:result.results[0]?.score==null?'상대평가 점수 산출 불가':'기본 점수 적용'}{result.preferenceSummary.unsupported.map(item=>` · 미반영: ${item.label} — ${item.reason}`).join('')}</p>}
         <div className="results-grid"><div className="ranked">{result.results.length?result.results.map((area,index)=><article className="panel result-card" key={area.id} onClick={event=>{
           if (!event.target.closest('a,button,summary')&&!window.getSelection()?.toString()) window.location.hash=`area-${area.id}`;
         }}>
@@ -92,7 +93,7 @@ export default function App() {
 
           <div className="card-actions"><a className="detail-button" id={`area-link-${area.id}`} href={`#area-${area.id}`}>상세 보기</a><button type="button" disabled title="검증된 행정동 중심 좌표가 없습니다.">지도에서 보기</button><button type="button" disabled title="보관함 기능은 준비 중입니다.">♧ 관심 상권 저장</button></div>
         </article>):<div className="panel empty">선택한 지역의 점포 데이터를 DB에서 확인하지 못했습니다. 구 또는 행정동 이름으로 다시 입력해 주세요.</div>}</div>
-          <aside className="side-column"><div className="panel methodology"><h2>점수는 이렇게 계산했어요</h2><p>첫 번째 후보의 실제 적용 가중치입니다. 누락 지표는 제외하고 다시 계산합니다.</p>{Object.entries(scoreLabels).map(([key,label])=>{const weight=result.results[0]?.effectiveWeights[key]??0;return <div className="weight" key={key}><span>{label}<b>{weight}%</b></span><div><i style={{width:`${weight}%`}}/></div></div>;})}<p className="aside-note">현재 적합도는 행정동의 전체 점포 수를 비교한 상업 활동 대리 지표입니다. 임대료·매출·생존율을 추정하지 않습니다.</p></div>
+          <aside className="side-column"><div className="panel methodology"><h2>점수는 이렇게 계산했어요</h2><p>첫 번째 후보의 실제 적용 가중치입니다. 누락 지표는 제외하고 다시 계산합니다.</p>{Object.entries(scoreLabels).map(([key,label])=>{const weight=result.results[0]?.effectiveWeights[key]??0;return <div className="weight" key={key}><span>{label}<b>{weight}%</b></span><div><i style={{width:`${weight}%`}}/></div></div>;})}<p className="aside-note">점수는 검색 범위 안의 후보를 비교한 값이며 창업 성공 확률이 아닙니다. 현재 적합도는 행정동의 전체 점포 수를 비교한 상업 활동 대리 지표입니다. 임대료·매출·생존율을 추정하지 않습니다.</p></div>
             <div className="side-tip"><strong>나에게 맞는 상권을 찾아보세요</strong><p>조건을 바꾸면 상위 3개 행정동을 다시 비교합니다.</p></div>
             <div className="panel revise"><h2>분석 조건 수정</h2>{[['industry','업종'],['region','희망 지역']].map(([key,label])=><label key={key}>{label}<input value={conditions[key]} onChange={e=>edit(key,e.target.value)}/></label>)}<button className="primary" onClick={e=>analyze(e,true)}>조건 수정 후 재분석</button></div></aside></div>
         {result.historyContext&&<p className="limitations">{result.historyContext.note}</p>}

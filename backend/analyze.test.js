@@ -80,6 +80,24 @@ test('레거시 months 입력은 조건·추천·점수·점포 수를 바꾸지
   assert.equal('months' in legacy.conditions,false);
 });
 
+test('API는 적용·미반영 선호와 실제 점수 가중치를 함께 반환한다', async () => {
+  const base=await analyze({prompt:'부산진구에서 카페를 열고 싶어',conditions:{...conditions,competition:'normal',stability:'normal'}},repository);
+  const composite=await analyze({prompt:'부산진구에서 경쟁이 적고 안정적인 곳에 카페를 열고 싶어',conditions:{
+    ...conditions,competition:'low',stability:'important',populationRequested:true,populationTypes:['density']
+  }},repository);
+  assert.equal(base.preferenceSummary.mode,'default');
+  assert.deepEqual(base.preferenceSummary.recognized,[]);
+  assert.equal(composite.preferenceSummary.mode,'adjusted');
+  assert.deepEqual(composite.preferenceSummary.applied.map(item=>item.key),['lowCompetition']);
+  assert.deepEqual(composite.preferenceSummary.unsupported.map(item=>item.key),['stability','population_density']);
+  assert.deepEqual(composite.preferenceSummary.effectiveWeights,composite.results[0].effectiveWeights);
+  assert(composite.warnings.some(w=>w.includes('안정성 조건:')));
+  assert(composite.warnings.some(w=>w.includes('인구밀도 조건:')));
+  assert(composite.results[0].effectiveWeights.competition>base.results[0].effectiveWeights.competition);
+  const evidence=rows=>rows.map(row=>[row.name,row.metrics.industryStores,row.historyContext]).sort((a,b)=>a[0].localeCompare(b[0]));
+  assert.deepEqual(evidence(composite.results),evidence(base.results));
+});
+
 test('DB 집계로 기존 응답 구조를 유지하며 공공 API를 호출하지 않는다', async () => {
   const oldFetch = globalThis.fetch;
   globalThis.fetch = () => { throw new Error('unexpected external API request'); };
@@ -90,7 +108,7 @@ test('DB 집계로 기존 응답 구조를 유지하며 공공 API를 호출하�
     assert(result.results.every(row => row.score !== null && row.scores.stability === null && row.scores.growth === null));
     assert(result.results.every(row => row.metrics.openings === null && row.metrics.survivalContext === null));
     assert.deepEqual(result.results.map(row => row.metrics.industryStores).sort((a,b)=>a-b), [10,30]);
-    assert.deepEqual(Object.keys(result).sort(), ['analyzedAt','conditions','industryCode','matchedIndustry','resolvedRegion','results','sources','timing','warnings']);
+    assert.deepEqual(Object.keys(result).sort(), ['analyzedAt','conditions','industryCode','matchedIndustry','preferenceSummary','resolvedRegion','results','sources','timing','warnings']);
     assert(result.sources[0].includes('public.stores'));
   } finally { globalThis.fetch = oldFetch; }
 });

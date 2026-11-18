@@ -6,6 +6,7 @@ import { parseConditions, validate, InputError, ConditionServiceError } from './
 import { resolveDbRegion } from './region-match.js';
 import { resolveDbIndustry, resolveIndustryIntent } from './industry-match.js';
 import { makeCandidate, rank } from './score.js';
+import { describePreferences } from './preferences.js';
 import { loadRecommendationData, loadIndustryCounts, RecommendationDbError } from './recommendation-db.js';
 import { loadAreaContexts } from './recommendation-context-db.js';
 
@@ -124,6 +125,7 @@ export async function analyze(input, repository = { loadRecommendationData, load
       return candidate;
     });
     const results = rank(candidates, conditions);
+    const preferenceSummary = describePreferences(conditions, results);
     timing.scoringMs = Math.round(performance.now() - step);
     step = performance.now(); stage = 'database-context';
     const selectedAreas = results.map(row => ({district_name:row.region,dong_name:row.name.slice(row.region.length+1)}));
@@ -141,11 +143,9 @@ export async function analyze(input, repository = { loadRecommendationData, load
       '점포이력은 최신 사건일이 오래됐고 현재 점포 업종코드와 분류 체계가 달라 동일 업종 개업·폐업 및 성장성 점수를 제외했습니다.'];
     if (industry.note) warnings.push(industry.note);
     if (region.note) warnings.push(region.note);
-    if (conditions.populationRequested) warnings.push('인구·유동인구 자료가 DB에 없어 요청한 인구 지표는 점수에 반영하지 않았습니다.');
-    if (conditions.stability === 'important') warnings.push('안정성 우선 요청은 적용 가능한 안정성 점수가 없어 가중치에 반영되지 않았습니다.');
-    if (conditions.growth === 'important') warnings.push('성장성 우선 요청은 적용 가능한 성장성 점수가 없어 가중치에 반영되지 않았습니다.');
+    for (const item of preferenceSummary.unsupported) warnings.push(`${item.label} 조건: ${item.reason}`);
     if (region.scope === 'dong') warnings.push('행정동 한 곳의 점포 수는 표시하지만 상대평가 점수는 계산할 수 없습니다.');
-    return { conditions, resolvedRegion:region.label, matchedIndustry:industry.label, industryCode:industry.filter,
+    return { conditions, preferenceSummary, resolvedRegion:region.label, matchedIndustry:industry.label, industryCode:industry.filter,
       results, warnings, analyzedAt:new Date().toISOString(), sources:['Supabase PostgreSQL public.stores (부산 점포)',
         'public.commercial_history_by_dong (행정동 전체 업종 참고)',
         'public.commercial_change_by_dong (상권 단위 참고)'], timing };
