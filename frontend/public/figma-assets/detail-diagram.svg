@@ -1,0 +1,25 @@
+<svg width="332" height="270" viewBox="0 0 332 270" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_6_6177)">
+<rect width="332" height="270" rx="6" fill="#EFF1EC"/>
+<rect x="94" width="8" height="270" fill="white"/>
+<rect x="226" width="8" height="270" fill="white"/>
+<rect y="102" width="332" height="8" fill="white"/>
+<rect y="182" width="332" height="8" fill="white"/>
+<rect x="-12" y="22" width="410" height="8" transform="rotate(32 -12 22)" fill="white"/>
+<circle cx="166" cy="145" r="95.5" fill="#D58B51" fill-opacity="0.141176" stroke="#D58B51"/>
+<circle cx="190.5" cy="93.5" r="4.5" fill="#D58B51" stroke="white" stroke-width="2"/>
+<circle cx="138.5" cy="113.5" r="4.5" fill="#D58B51" stroke="white" stroke-width="2"/>
+<circle cx="203.5" cy="129.5" r="4.5" fill="#D58B51" stroke="white" stroke-width="2"/>
+<circle cx="118.5" cy="173.5" r="4.5" fill="#D58B51" stroke="white" stroke-width="2"/>
+<circle cx="158.5" cy="194.5" r="4.5" fill="#D58B51" stroke="white" stroke-width="2"/>
+<circle cx="216.5" cy="190.5" r="4.5" fill="#D58B51" stroke="white" stroke-width="2"/>
+<rect x="150.5" y="138.5" width="31" height="31" rx="15.5" fill="#2454D6"/>
+<rect x="150.5" y="138.5" width="31" height="31" rx="15.5" stroke="white" stroke-width="3"/>
+<path d="M167.755 149.318V159.5H165.602V151.362H165.543L163.211 152.823V150.914L165.732 149.318H167.755Z" fill="white"/>
+</g>
+<defs>
+<clipPath id="clip0_6_6177">
+<rect width="332" height="270" rx="6" fill="white"/>
+</clipPath>
+</defs>
+</svg>
