@@ -188,6 +188,17 @@ export async function analyzeMap(input,repository={loadRecommendationData,loadIn
     ...(scope.attribution?{regionAttribution:scope.attribution}:{})};
 }
 
+// Share one city-wide normalization and history window across all comparison slots.
+export async function analyzeComparison(input, repository={loadRecommendationData,loadIndustryCounts,loadAreaContexts}) {
+  const conditions=validate(input?.conditions);
+  const data=await repository.loadRecommendationData();
+  const analysis=await analyze({prompt:'상권 비교',conditions:{...conditions,region:'부산 전체'}},
+    {...repository,loadRecommendationData:async()=>data},data.areas.length);
+  return {...analysis,conditions,areas:analysis.results,visibleIds:analysis.results.map(area=>area.id),
+    industries:[...new Set(data.industries.map(row=>row.industry_name))].sort((a,b)=>a.localeCompare(b,'ko')),
+    districts:[...new Set(data.areas.map(row=>row.district_name))].sort((a,b)=>a.localeCompare(b,'ko'))};
+}
+
 export const server = createServer(async (request, response) => {
   try {
     const requested = new URL(request.url, 'http://localhost').pathname;
@@ -195,6 +206,14 @@ export const server = createServer(async (request, response) => {
     if (requested === '/api/map-config') {
       response.setHeader('Cache-Control','no-store');
       return json(response,200,{kakaoJavascriptKey:process.env.KAKAO_JAVASCRIPT_KEY || ''});
+    }
+    if (requested === '/api/comparison-data') {
+      if(request.method!=='POST')return json(response,405,{error:'POST 요청이 필요합니다.'});
+      response.setHeader('Cache-Control','no-store');
+      try {return json(response,200,await analyzeComparison(await readBody(request)));}
+      catch(error){return json(response,error instanceof InputError?422:502,{
+        error:error instanceof InputError || error instanceof RecommendationDbError?error.message:'비교 데이터를 조회할 수 없습니다.',
+        choices:error.choices ?? [],choiceType:error.choiceType ?? null});}
     }
     if (requested === '/api/map-data') {
       if(request.method!=='POST')return json(response,405,{error:'POST 요청이 필요합니다.'});

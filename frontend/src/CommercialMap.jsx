@@ -7,12 +7,12 @@ const icons='/figma-assets/map-';
 const defaultFilters={region:'부산진구',industry:'카페',score:'all',range:'boundary'};
 const months=value=>value==null?'데이터 부족':`${Number(value).toLocaleString('ko-KR',{maximumFractionDigits:1})}개월`;
 
-export default function CommercialMap({initialConditions,onConditionsChange,onOpenDetail}) {
+export default function CommercialMap({initialConditions,onConditionsChange,onOpenDetail,comparisonSelection}) {
   const [filters,setFilters]=useState({...defaultFilters,region:initialConditions?.region||defaultFilters.region,industry:initialConditions?.industry||defaultFilters.industry});
-  const [data,setData]=useState(null),[features,setFeatures]=useState([]),[selectedId,setSelectedId]=useState(null);
+  const [data,setData]=useState(comparisonSelection?.snapshot??null),[features,setFeatures]=useState([]),[selectedId,setSelectedId]=useState(null);
   const [loading,setLoading]=useState(false),[error,setError]=useState(''),[choices,setChoices]=useState([]);
   const [mapStatus,setMapStatus]=useState('loading'),[appliedScore,setAppliedScore]=useState('all'),[range,setRange]=useState('boundary');
-  const [viewportIds,setViewportIds]=useState(null);
+  const [viewportIds,setViewportIds]=useState(comparisonSelection?.ids??null);
   const canvas=useRef(null),map=useRef(null),sdk=useRef(null),handles=useRef(new Map()),focusArea=useRef(null),circle=useRef(null),requestId=useRef(0);
   const selected=data?.areas.find(area=>area.id===selectedId) ?? null;
   const featureByKey=useMemo(()=>new Map(features.map(feature=>[regionKey(feature.properties.district_name,feature.properties.dong_name),feature])),[features]);
@@ -37,7 +37,7 @@ export default function CommercialMap({initialConditions,onConditionsChange,onOp
     }catch(reason){if(id===requestId.current)setError(reason.name==='TimeoutError'?'지도 분석이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.':reason.message);}
     finally{if(id===requestId.current)setLoading(false);}
   }
-  useEffect(()=>{search();return ()=>{requestId.current++;};},[]);
+  useEffect(()=>{if(!comparisonSelection)search();return ()=>{requestId.current++;};},[]);
   useEffect(()=>{
     let cancelled=false,observer;
     async function start(){
@@ -117,7 +117,7 @@ export default function CommercialMap({initialConditions,onConditionsChange,onOp
 
   useEffect(()=>{
     if(mapStatus!=='ready'||!map.current||!data||!features.length)return;
-    const ids=new Set(data.visibleIds),bounds=new sdk.current.maps.LatLngBounds();let count=0;
+    const ids=new Set(viewportIds??data.visibleIds),bounds=new sdk.current.maps.LatLngBounds();let count=0;
     for(const area of data.areas){
       if(!ids.has(area.id))continue;
       const feature=featureByKey.get(regionKey(area.region,area.name.slice(area.region.length+1)));if(!feature)continue;
@@ -127,7 +127,7 @@ export default function CommercialMap({initialConditions,onConditionsChange,onOp
       const mobile=canvas.current.clientWidth<700;
       map.current.setBounds(bounds,90,mobile?30:360,mobile?360:80,35);
     }
-  },[data,features,mapStatus,featureByKey]);
+  },[data,features,mapStatus,featureByKey,viewportIds]);
 
   useEffect(()=>{
     circle.current?.setMap(null);circle.current=null;
