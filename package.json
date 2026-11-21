@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "migrate:auth": "node --env-file=.env backend/migrate-auth.js",
+    "test:auth:db": "node --env-file=.env --test backend/auth-db.test.js",
     "dev": "node --watch --env-file=.env backend/server.js",
     "build": "vite build frontend",
     "test": "node --test backend/*.test.js",

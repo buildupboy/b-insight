@@ -67,7 +67,7 @@ export function resolveDbIndustry(requested, rows) {
   const name = normalized(requested);
   if (!name) throw new IndustryMatchError('어떤 업종을 생각하고 계신가요? 업종을 입력해 주세요.');
   const valid = checkedRows(rows);
-  const exact = valid.filter(row => normalized(row.industry_name) === name);
+  const exact = valid.filter(row => normalized(row.industry_name) === name || row.industry_code === name);
   if (exact.length > 1) throw new IndustryMatchError(`“${requested}”은 DB에서 여러 코드로 사용됩니다. 업종 분류 확인이 필요합니다.`);
   let matches = exact, label = exact[0]?.industry_name, scope = 'small', note = null;
   if (!matches.length && aliases.has(name)) {

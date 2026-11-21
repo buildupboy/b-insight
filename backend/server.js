@@ -9,6 +9,11 @@ import { makeCandidate, rank } from './score.js';
 import { describePreferences } from './preferences.js';
 import { loadRecommendationData, loadIndustryCounts, RecommendationDbError } from './recommendation-db.js';
 import { loadAreaContexts } from './recommendation-context-db.js';
+import { createAuthHandler } from './auth.js';
+import {createAnalysisOptionsLoader,validateAnalysisRequest} from './analysis-options.js';
+const loadAnalysisOptions=createAnalysisOptionsLoader();
+
+const handleAuth = createAuthHandler();
 
 const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'frontend', 'dist');
 const types = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png' };
@@ -202,6 +207,13 @@ export async function analyzeComparison(input, repository={loadRecommendationDat
 export const server = createServer(async (request, response) => {
   try {
     const requested = new URL(request.url, 'http://localhost').pathname;
+    if (await handleAuth(request, response, requested)) return;
+    if (requested === '/api/analysis-options') {
+      if(request.method!=='GET')return json(response,405,{error:'GET 요청이 필요합니다.'});
+      response.setHeader('Cache-Control','private, max-age=300');
+      try{return json(response,200,await loadAnalysisOptions());}
+      catch(error){response.setHeader('Cache-Control','no-store');return json(response,503,{error:error instanceof RecommendationDbError?error.message:'지역·업종 목록을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.'});}
+    }
     if (requested === '/api/health') return json(response, 200, { ok:true, openaiConfigured:Boolean(process.env.OPENAI_API_KEY), databaseConfigured:Boolean(process.env.DATABASE_URL) });
     if (requested === '/api/map-config') {
       response.setHeader('Cache-Control','no-store');
@@ -226,8 +238,7 @@ export const server = createServer(async (request, response) => {
       if (request.method !== 'POST') return json(response, 405, { error:'POST 요청이 필요합니다.' });
       const started = performance.now();
       try {
-        const input = await readBody(request);
-        if (!input || typeof input.prompt !== 'string' || !input.prompt.trim() || input.prompt.length > 2000) throw new InputError('창업 조건을 2000자 이내로 입력해 주세요.');
+        const input = validateAnalysisRequest(await readBody(request));
         const result = await analyze(input);
         result.timing.serverTotalMs = Math.round(performance.now() - started);
         logTiming(200, result.timing);

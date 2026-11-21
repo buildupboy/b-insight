@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {comparisonMetrics,formatMetric,metricValue,metricDifference,selectComparison,loadComparison,comparisonKey} from './comparison.mjs';
+import SaveAreaButton from './SaveAreaButton.jsx';
 import {panelReason} from './commercial-map.mjs';
 
 function Difference({area,base,metric}) {
@@ -25,7 +26,7 @@ export default function AreaComparison({conditions,ids,onIdsChange,onConditionsC
     if(!conditions.industry)return;
     setLoading(true);
     loadComparison(conditions,{refresh:retry>0}).then(data=>{
-      if(!active)return;setSnapshot(data);onSnapshot(data);
+      if(!active)return;setSnapshot(data);onSnapshot(data);setDraft(current=>current===conditions.industry&&/^[A-Za-z][0-9]{5}$/.test(current)?data.matchedIndustry:current);
     }).catch(reason=>{if(active)setError(reason.name==='TimeoutError'?'비교 데이터 조회가 지연되고 있습니다. 다시 시도해 주세요.':reason.message);})
       .finally(()=>{if(active)setLoading(false);});
     return ()=>{active=false;};
@@ -46,7 +47,7 @@ export default function AreaComparison({conditions,ids,onIdsChange,onConditionsC
   return <section className="comparison-page" aria-labelledby="comparison-title">
     <h1 id="comparison-title" ref={title} tabIndex={-1}>상권 비교</h1>
     <div className="comparison-toolbar">
-      <form onSubmit={event=>{event.preventDefault();if(draft.trim())onConditionsChange({...conditions,industry:draft.trim()});}}>
+      <form onSubmit={event=>{event.preventDefault();if(draft.trim())onConditionsChange({...conditions,industry:draft.trim()===snapshot?.matchedIndustry?conditions.industry:draft.trim()});}}>
         <label htmlFor="comparison-industry">비교 업종</label><input id="comparison-industry" list="comparison-industries" value={draft} required maxLength={100} placeholder="업종 입력" onChange={event=>setDraft(event.target.value)}/>
         <datalist id="comparison-industries">{snapshot?.industries.map(industry=><option key={industry}>{industry}</option>)}</datalist>
         <button type="submit">적용</button>
@@ -66,7 +67,7 @@ export default function AreaComparison({conditions,ids,onIdsChange,onConditionsC
               {index===0&&<span className="comparison-base-badge">기준</span>}</div>
             {area&&<div className="comparison-header-actions"><button onClick={()=>choose(index)}>변경</button>
               {index>0&&<button aria-label={`${area.name} 비교 삭제`} onClick={()=>onIdsChange(selectComparison(ids,index,null))}>삭제</button>}
-              <button aria-pressed={savedIds.has(area.id)} onClick={()=>onToggleSaved(area)}>{savedIds.has(area.id)?'★ 저장됨':'☆ 관심 저장'}</button></div>}
+              <SaveAreaButton area={area} industry={snapshot.matchedIndustry||conditions.industry}/></div>}
           </th>;
         })}</tr></thead>
         <tbody>{comparisonMetrics.map((metric,rowIndex)=><tr key={metric.key}>

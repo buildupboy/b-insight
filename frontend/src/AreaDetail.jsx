@@ -2,6 +2,7 @@ import React from 'react';
 import EventTrend from './EventTrend.jsx';
 import CompetitionMap from './CompetitionMap.jsx';
 import {kakaoSearchUrl} from './kakao-map.mjs';
+import SaveAreaButton from './SaveAreaButton.jsx';
 
 export function shown(value) {
   return value == null ? '데이터 부족' : Number(value).toLocaleString('ko-KR');
@@ -19,7 +20,7 @@ export function recommendationReason(area,industry) {
 const operatingMonths=value=>value==null?'데이터 부족':`${Number(value).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1})}개월`;
 const percent=value=>value==null?'데이터 부족':`${(value*100).toLocaleString('ko-KR',{maximumFractionDigits:1})}%`;
 
-export default function AreaDetail({area,rank,result,backHref='#results',backLabel='추천 결과',onCompare,onToggleSaved,isSaved=false}) {
+export default function AreaDetail({area,rank,result,backHref='#results',backLabel='추천 결과',onCompare}) {
   const {metrics,scores,historyContext}=area;
   const industry=result.matchedIndustry||result.conditions.industry;
   const dong=area.region&&area.name.startsWith(`${area.region} `)?area.name.slice(area.region.length+1):area.name;
@@ -44,7 +45,7 @@ export default function AreaDetail({area,rank,result,backHref='#results',backLab
       <div className="detail-actions">
         <div className="detail-score">{area.score==null?<small>데이터 없음</small>:<><strong>{shown(area.score)}</strong><small>점</small></>}</div>
         <div className="detail-action-buttons">
-          <button className="primary" type="button" aria-pressed={isSaved} onClick={onToggleSaved}><img src={`${assets}bookmark.svg`} alt=""/>{isSaved?'관심 상권 저장됨':'관심 상권 저장'}</button>
+          <SaveAreaButton area={area} industry={industry} primary/>
           <button type="button" onClick={onCompare}>기준 상권으로 비교</button>
           <a className="detail-map-action" href={kakaoSearchUrl(area,industry)} target="_blank" rel="noreferrer">지도에서 보기 ↗</a>
         </div>
