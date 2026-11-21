@@ -59,8 +59,3 @@ export async function loadComparison(conditions,{refresh=false}={}) {
   const entry={promise,time:Date.now()};snapshots.set(key,entry);
   try{return await promise;}catch(error){if(snapshots.get(key)===entry)snapshots.delete(key);throw error;}
 }
-export function readSavedAreas() {
-  try {const items=JSON.parse(localStorage.getItem('binsight.savedAreas')||'[]');
-    return Array.isArray(items)?items.filter(item=>typeof item?.id==='string'&&typeof item?.name==='string').slice(0,206):[];
-  }catch{return [];}
-}
