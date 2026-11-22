@@ -7,9 +7,9 @@ import { resolveRegion } from './region-lookup.js';
 import { resolveDbIndustry, resolveIndustryIntent } from './industry-match.js';
 import { makeCandidate, rank } from './score.js';
 import { describePreferences } from './preferences.js';
-import { loadRecommendationData, loadIndustryCounts, RecommendationDbError } from './recommendation-db.js';
+import { loadRecommendationData, loadIndustryCounts, loadIndustryLocations, RecommendationDbError } from './recommendation-db.js';
 import { loadAreaContexts } from './recommendation-context-db.js';
-import { createAuthHandler } from './auth.js';
+import { AuthError, createAuthHandler, decodeAreaId } from './auth.js';
 import {createAnalysisOptionsLoader,validateAnalysisRequest} from './analysis-options.js';
 const loadAnalysisOptions=createAnalysisOptionsLoader();
 
@@ -182,7 +182,7 @@ export async function analyzeMap(input,repository={loadRecommendationData,loadIn
   const analysis=await analyze({prompt:'상권 지도',conditions:{...conditions,region:'부산 전체'}},
     {...repository,loadRecommendationData:async()=>data},data.areas.length);
   const visible=new Set(scope.areas.map(area=>`${area.district_name}\0${area.dong_name}`));
-  return {conditions,resolvedRegion:scope.label,matchedIndustry:analysis.matchedIndustry,
+  return {conditions,resolvedRegion:scope.label,matchedIndustry:analysis.matchedIndustry,industryCode:analysis.industryCode,
     industries:[...new Set(data.industries.map(row=>row.industry_name))].sort((a,b)=>a.localeCompare(b,'ko')),
     districts:[...new Set(data.areas.map(row=>row.district_name))].sort((a,b)=>a.localeCompare(b,'ko')),
     visibleIds:analysis.results.filter(row=>visible.has(`${row.region}\0${row.name.slice(row.region.length+1)}`)).map(row=>row.id),
@@ -206,7 +206,7 @@ export async function analyzeComparison(input, repository={loadRecommendationDat
 
 export const server = createServer(async (request, response) => {
   try {
-    const requested = new URL(request.url, 'http://localhost').pathname;
+    const {pathname:requested,searchParams} = new URL(request.url, 'http://localhost');
     if (await handleAuth(request, response, requested)) return;
     if (requested === '/api/analysis-options') {
       if(request.method!=='GET')return json(response,405,{error:'GET 요청이 필요합니다.'});
@@ -218,6 +218,22 @@ export const server = createServer(async (request, response) => {
     if (requested === '/api/map-config') {
       response.setHeader('Cache-Control','no-store');
       return json(response,200,{kakaoJavascriptKey:process.env.KAKAO_JAVASCRIPT_KEY || ''});
+    }
+    if (requested === '/api/map-stores') {
+      if(request.method!=='GET')return json(response,405,{error:'GET 요청이 필요합니다.'});
+      try {
+        const industryCodes=searchParams.getAll('industryCode');
+        if(!industryCodes.length||industryCodes.length>64||industryCodes.some(code=>!(/^[A-Za-z][0-9]{5}$/).test(code))) {
+          throw new InputError('점포를 조회할 업종 코드가 올바르지 않습니다.');
+        }
+        const area=decodeAreaId(searchParams.get('area'));
+        const stores=await loadIndustryLocations(area,[...new Set(industryCodes)]);
+        response.setHeader('Cache-Control','private, max-age=60');
+        return json(response,200,{stores});
+      } catch(error) {
+        const invalid=error instanceof AuthError || error instanceof InputError;
+        return json(response,invalid?422:502,{error:invalid||error instanceof RecommendationDbError?error.message:'점포 위치를 불러오지 못했습니다.'});
+      }
     }
     if (requested === '/api/comparison-data') {
       if(request.method!=='POST')return json(response,405,{error:'POST 요청이 필요합니다.'});

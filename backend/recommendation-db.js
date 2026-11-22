@@ -56,3 +56,21 @@ export async function loadIndustryCounts(industryCodes, areas) {
     await client.end().catch(() => {});
   }
 }
+
+export async function loadIndustryLocations({district, dong}, industryCodes) {
+  if (!process.env.DATABASE_URL) throw new RecommendationDbError('DATABASE_URL이 설정되지 않았습니다.');
+  const client = new pg.Client({connectionString:process.env.DATABASE_URL,...queryOptions});
+  try {
+    await client.connect();
+    const {rows} = await client.query(`SELECT store_id AS id, store_name AS name, road_address AS address,
+        latitude::float8 AS latitude, longitude::float8 AS longitude
+      FROM public.stores
+      WHERE district_name = $1 AND dong_name = $2 AND industry_code = ANY($3::text[])
+        AND latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180`, [district,dong,industryCodes]);
+    return rows;
+  } catch {
+    throw new RecommendationDbError('선택한 동의 점포 위치를 조회할 수 없습니다.');
+  } finally {
+    await client.end().catch(() => {});
+  }
+}

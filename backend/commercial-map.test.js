@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {geometryAnchor,geometryBounds,geometryPolygons,matchesScore,regionKey,scoreTier} from '../frontend/src/commercial-map.mjs';
+import {geometryAnchor,geometryBounds,geometryPolygons,matchesScore,regionKey,scoreTier,storesInRange} from '../frontend/src/commercial-map.mjs';
 
 const rectangle=(x1,y1,x2,y2)=>[[x1,y1],[x2,y1],[x2,y2],[x1,y2],[x1,y1]];
 test('boundary paths preserve multipolygons and holes; anchor remains outside the hole',()=>{
@@ -27,6 +27,17 @@ test('map filters preserve real scores, including zero and unavailable scores',(
   assert.equal(scoreTier(60),'amber');
   assert.equal(scoreTier(null),'none');
   assert.equal(regionKey('부산진구','부전제1동'),regionKey('부산진구','부전1동'));
+});
+test('store pins are filtered to the selected distance from the dong anchor',()=>{
+  const stores=[
+    {id:'near',longitude:129,latitude:35.003},
+    {id:'middle',longitude:129,latitude:35.007},
+    {id:'far',longitude:129,latitude:35.012}
+  ];
+  const center=[129,35];
+  assert.deepEqual(storesInRange(stores,'boundary',null),stores);
+  assert.deepEqual(storesInRange(stores,'500',center).map(store=>store.id),['near']);
+  assert.deepEqual(storesInRange(stores,'1000',center).map(store=>store.id),['near','middle']);
 });
 test('bundled boundaries cover 206 unique Busan administrative dongs with real coordinates',()=>{
   const data=JSON.parse(readFileSync(new URL('../frontend/public/data/busan-dongs.geojson',import.meta.url)));

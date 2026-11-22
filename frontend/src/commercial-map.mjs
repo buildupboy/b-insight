@@ -37,6 +37,19 @@ export function geometryAnchor(geometry) {
   return point;
 }
 
+export function storesInRange(stores, range, center) {
+  if(range==='boundary')return stores;
+  if(!center)return [];
+  const radians=degrees=>degrees*Math.PI/180;
+  const [longitude,latitude]=center;
+  return stores.filter(store=>{
+    const dLat=radians(store.latitude-latitude),dLng=radians(store.longitude-longitude);
+    const arc=Math.sin(dLat/2)**2+Math.cos(radians(latitude))*Math.cos(radians(store.latitude))*Math.sin(dLng/2)**2;
+    const distance=2*6371008.8*Math.asin(Math.min(1,Math.sqrt(arc)));
+    return distance<=Number(range);
+  });
+}
+
 export function panelReason(area) {
   if(area.score==null)return '비교할 수 있는 데이터가 부족합니다.';
   if(area.scores.stability>=70&&area.scores.growth>=70)return '과거 안정성과 성장 흐름이 좋은 상권이에요.';

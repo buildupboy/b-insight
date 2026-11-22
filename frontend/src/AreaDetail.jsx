@@ -1,8 +1,9 @@
-import React from 'react';
+import React, {useState} from 'react';
 import EventTrend from './EventTrend.jsx';
 import CompetitionMap from './CompetitionMap.jsx';
 import {kakaoSearchUrl} from './kakao-map.mjs';
 import SaveAreaButton from './SaveAreaButton.jsx';
+import {recentEvents, recommendationReason} from './area-insights.mjs';
 
 export function shown(value) {
   return value == null ? '데이터 부족' : Number(value).toLocaleString('ko-KR');
@@ -10,18 +11,13 @@ export function shown(value) {
 
 export const scoreLabels={fit:'지역·업종 적합도',competition:'경쟁 적합도',stability:'안정성',growth:'성장성'};
 
-export function recommendationReason(area,industry) {
-  if (area.score==null) return '추천 점수를 계산할 데이터가 부족합니다.';
-  const labels={fit:'상권 활동',competition:'동일 업종 경쟁 수준',stability:'전체 상권의 영업기간',growth:'전체 상권의 과거 성장 흐름'};
-  const criteria=Object.keys(labels).filter(key=>area.effectiveWeights[key]>0).map(key=>labels[key]);
-  return `${industry} 점포 ${shown(area.metrics.industryStores)}개가 있는 상권입니다. ${criteria.join('·')}을 비교해 추천했습니다.`;
-}
-
 const operatingMonths=value=>value==null?'데이터 부족':`${Number(value).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1})}개월`;
 const percent=value=>value==null?'데이터 부족':`${(value*100).toLocaleString('ko-KR',{maximumFractionDigits:1})}%`;
 
 export default function AreaDetail({area,rank,result,backHref='#results',backLabel='추천 결과',onCompare}) {
   const {metrics,scores,historyContext}=area;
+  const [eventMonths,setEventMonths]=useState(12);
+  const events=recentEvents(historyContext,eventMonths);
   const industry=result.matchedIndustry||result.conditions.industry;
   const dong=area.region&&area.name.startsWith(`${area.region} `)?area.name.slice(area.region.length+1):area.name;
   const same=metrics.industryStores,total=metrics.totalStores;
@@ -38,7 +34,7 @@ export default function AreaDetail({area,rank,result,backHref='#results',backLab
         <div className="chips detail-tags">
           {scores.stability!=null&&<span className="tag green">안정성 {shown(scores.stability)}점</span>}
           {metrics.competition!=null&&<span className="tag amber">동일 업종 비중 {percent(metrics.competition)}</span>}
-          {metrics.growth!=null&&<span className="tag green">{metrics.growth>0?'개업 우세':metrics.growth<0?'폐업 우세':'개업·폐업 균형'}</span>}
+          {scores.growth!=null&&<span className="tag blue">성장성 {shown(scores.growth)}점</span>}
           <span className="tag green">{area.verdict}</span>
         </div>
       </div>
@@ -54,23 +50,28 @@ export default function AreaDetail({area,rank,result,backHref='#results',backLab
 
     <div className="detail-metric-grid">
       <section className="panel detail-metric"><h2>평균 영업기간</h2><strong className="detail-value">{operatingMonths(historyContext?.averageOperatingMonths)}</strong></section>
-      <section className="panel detail-metric"><h2>개업 · 폐업</h2><div className="detail-event-values"><span>{historyContext?.permitRecords==null?'데이터 부족':`+${shown(historyContext.permitRecords)}`}</span><span>{historyContext?.closureRecords==null?'데이터 부족':`−${shown(historyContext.closureRecords)}`}</span></div></section>
+      <section className="panel detail-metric">
+        <h2>개업 · 폐업</h2>
+        <div className="event-period-options" role="group" aria-label="개업·폐업 조회 기간">
+          {[12,24].map(months=><button key={months} type="button" aria-pressed={eventMonths===months} onClick={()=>setEventMonths(months)}>최근 {months/12}년</button>)}
+        </div>
+        {events?<><div className="detail-event-values" aria-live="polite"><span>개업 {shown(events.openings)}건</span><span>폐업 {shown(events.closures)}건</span></div>
+          <p className="detail-event-period">{events.from} ~ {events.to} · 전체 업종</p></>:<p className="detail-muted">데이터 부족</p>}
+      </section>
       <section className="panel detail-metric"><h2>동일 업종 점포</h2><strong className="detail-value">{same==null?'데이터 부족':`${shown(same)}개`}</strong></section>
     </div>
-
-    <section className="panel detail-change"><div><h2>과거 상권 흐름</h2><strong>{metrics.growth==null?'데이터 부족':metrics.growth>0?'개업 우세':metrics.growth<0?'폐업 우세':'개업·폐업 균형'}</strong></div></section>
 
     <div className="detail-analysis-grid">
       <section className="panel detail-analysis">
         <h2>추천 이유</h2>
         <p>{recommendationReason(area,industry)}</p>
-        {scores.competition!=null&&scores.competition<40&&<div className="detail-caution"><strong>주의할 점</strong><p>비교 상권 대비 동일 업종의 경쟁 수준이 높은 편입니다.</p></div>}
         <div className="detail-weights">{Object.entries(scoreLabels).map(([key,label])=><div className="weight" key={key}>
-          <span>{label}<b>{scores[key]==null?'데이터 부족':`${shown(scores[key])}점`} · {area.effectiveWeights[key]??0}%</b></span>
+          <span>{label}<b>{scores[key]==null?'데이터 부족':`${shown(scores[key])}점 · ${area.effectiveWeights[key]??0}%`}</b></span>
           <div><i style={{width:`${area.effectiveWeights[key]??0}%`}}/></div>
         </div>)}</div>
+        {historyContext?.growthPeriod&&<p className="detail-event-period">성장성 평가 기간 {historyContext.growthPeriod.from} ~ {historyContext.growthPeriod.to}</p>}
         <div className="detail-charts">
-          <EventTrend key={area.id} trend={historyContext?.eventTrend}/>
+          <EventTrend key={`${area.id}-${eventMonths}`} trend={events?.rows}/>
           <section className="industry-distribution"><h3>업종 분포</h3>
             {total==null?<p className="detail-muted">데이터 없음</p>:<>
               <div className="detail-industry-donut" style={{background:`conic-gradient(#2454d6 ${total>0?same/total*100:0}%, #e0e4e9 0)`}} role="img" aria-label={`${industry} ${shown(same)}개, 그 외 업종 ${shown(total-same)}개`}><strong>{percent(total>0?same/total:0)}</strong></div>

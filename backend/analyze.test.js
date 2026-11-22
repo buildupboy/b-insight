@@ -373,6 +373,7 @@ test('map returns all real area scores and scope IDs without truncating at three
   assert.equal(result.visibleIds.length,4);
   assert(result.areas.every(row=>row.historyContext==null || !('eventTrend' in row.historyContext)));
   assert.equal(result.conditions.competition,'low');
+  assert.deepEqual(result.industryCode,{indsSclsCd:'I21201'});
   assert(result.resolvedRegion.includes('서면'));
   const analysis=await analyze({prompt:'카페',conditions:{...conditions,region:'부산 전체',stability:'normal'}},mapRepository);
   for(const row of analysis.results)assert.equal(row.score,result.areas.find(area=>area.id===row.id).score);
@@ -380,4 +381,12 @@ test('map returns all real area scores and scope IDs without truncating at three
   assert.deepEqual(result.districts,['부산진구','해운대구']);
   assert.equal((await dispatch('/api/map-data')).status,405);
   assert.equal((await dispatch('/api/map-data','POST',{industry:''})).status,422);
+});
+
+test('map store endpoints reject invalid method, area and industry codes before querying the DB',async()=>{
+  const area=Buffer.from('부산진구|부전1동').toString('base64url');
+  assert.equal((await dispatch('/api/map-stores','POST',{})).status,405);
+  assert.equal((await dispatch('/api/map-stores?industryCode=I21201&area=wrong')).status,422);
+  assert.equal((await dispatch(`/api/map-stores?area=${area}&industryCode=I21`)).status,422);
+  assert.equal((await dispatch(`/api/map-stores?area=${area}`)).status,422);
 });

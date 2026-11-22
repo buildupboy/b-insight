@@ -1,11 +1,11 @@
 export const comparisonMetrics=[
   {key:'score',label:'추천 점수',unit:'점',digits:0},
-  {key:'months',label:'평균 생존기간',unit:'개월',digits:1,note:'전체 업종 · 폐업 점포의 평균 영업기간'},
-  {key:'stores',label:'동일 업종 점포 수',unit:'개',digits:0,note:'적을수록 유리'},
-  {key:'openings',label:'최근 개업',unit:'곳',digits:0,note:'전체 업종 · 공통 최근 12개월'},
-  {key:'closures',label:'최근 폐업',unit:'곳',digits:0,note:'전체 업종 · 공통 최근 12개월 · 적을수록 유리'},
+  {key:'months',label:'폐업 점포 평균 영업기간',unit:'개월',digits:1},
+  {key:'stores',label:'동일 업종 점포 수',unit:'개',digits:0},
+  {key:'openings',label:'최근 1년 개업',unit:'곳',digits:0},
+  {key:'closures',label:'최근 1년 폐업',unit:'곳',digits:0},
   {key:'net',label:'개업 − 폐업',unit:'곳',digits:0,signed:true},
-  {key:'growth',label:'상권 성장성',unit:'%',differenceUnit:'%p',digits:1,note:'전체 업종 · (개업−폐업) / (개업+폐업)'},
+  {key:'growth',label:'상권 성장성',unit:'%',differenceUnit:'%p',digits:1},
 ];
 export function metricValue(area,key) {
   const history=area?.historyContext;

@@ -2,6 +2,7 @@ import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {loadKakaoSdk} from './kakao-map.mjs';
 import {shown} from './AreaDetail.jsx';
 import {geometryAnchor,geometryBounds,geometryPolygons,matchesScore,panelReason,regionKey,scoreTier} from './commercial-map.mjs';
+import StoreLocationPins from './StoreLocationPins.jsx';
 
 const icons='/figma-assets/map-';
 const defaultFilters={region:'부산진구',industry:'카페',score:'all',range:'boundary'};
@@ -13,6 +14,7 @@ export default function CommercialMap({initialConditions,onConditionsChange,onOp
   const [loading,setLoading]=useState(false),[error,setError]=useState(''),[choices,setChoices]=useState([]);
   const [mapStatus,setMapStatus]=useState('loading'),[appliedScore,setAppliedScore]=useState('all'),[range,setRange]=useState('boundary');
   const [viewportIds,setViewportIds]=useState(comparisonSelection?.ids??null);
+  const [pinAreaId,setPinAreaId]=useState(null);
   const canvas=useRef(null),map=useRef(null),sdk=useRef(null),handles=useRef(new Map()),focusArea=useRef(null),circle=useRef(null),requestId=useRef(0);
   const selected=data?.areas.find(area=>area.id===selectedId) ?? null;
   const featureByKey=useMemo(()=>new Map(features.map(feature=>[regionKey(feature.properties.district_name,feature.properties.dong_name),feature])),[features]);
@@ -21,18 +23,31 @@ export default function CommercialMap({initialConditions,onConditionsChange,onOp
     const ids=new Set(viewportIds??data.visibleIds);
     return data.areas.filter(area=>ids.has(area.id)&&matchesScore(area.score,appliedScore));
   },[data,viewportIds,appliedScore]);
+  const industryCodes=useMemo(()=>{
+    const filter=data?.industryCode;
+    return filter?.indsSclsCds??(filter?.indsSclsCd?[filter.indsSclsCd]:[]);
+  },[data]);
+  const pinArea=displayed.find(area=>area.id===pinAreaId&&area.id===selectedId);
+  const pinCenter=useMemo(()=>{
+    if(!pinArea||range==='boundary')return null;
+    return geometryAnchor(featureByKey.get(regionKey(pinArea.region,pinArea.name.slice(pinArea.region.length+1)))?.geometry);
+  },[featureByKey,pinArea,range]);
 
-  async function search(next=filters) {
+  function selectArea(id){
+    setSelectedId(id);setPinAreaId(id);focusArea.current?.(id);
+  }
+
+  async function search(next=filters,viewBounds=null) {
     const id=++requestId.current;
     setLoading(true);setError('');setChoices([]);
     try {
       const response=await fetch('/api/map-data',{method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(75000),body:JSON.stringify({
-        region:next.region,industry:next.industry,competition:initialConditions?.competition,stability:initialConditions?.stability,growth:initialConditions?.growth,
+        region:viewBounds?'부산 전체':next.region,industry:next.industry,competition:initialConditions?.competition,stability:initialConditions?.stability,growth:initialConditions?.growth,
       })});
       const result=await response.json();
       if(id!==requestId.current)return;
       if(!response.ok){setChoices(result.choiceType==='region'?result.choices??[]:[]);throw new Error(result.error||'지도를 검색하지 못했습니다.');}
-      setData(result);setViewportIds(null);setAppliedScore(next.score);setRange(next.range);
+      setData(result);setViewportIds(viewBounds?areasInViewport(result.areas,viewBounds):null);setAppliedScore(next.score);setRange(next.range);
       onConditionsChange?.(result.conditions);
     }catch(reason){if(id===requestId.current)setError(reason.name==='TimeoutError'?'지도 분석이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.':reason.message);}
     finally{if(id===requestId.current)setLoading(false);}
@@ -71,7 +86,7 @@ export default function CommercialMap({initialConditions,onConditionsChange,onOp
       if(!feature)continue;
       const point=geometryAnchor(feature.geometry);
       if(!point)continue;
-      const select=()=>{setSelectedId(area.id);focusArea.current?.(area.id);};
+      const select=()=>selectArea(area.id);
       const polygons=geometryPolygons(feature.geometry).map(rings=>{
         const polygon=new kakao.maps.Polygon({map:map.current,
           path:rings.map(ring=>ring.map(([lng,lat])=>new kakao.maps.LatLng(lat,lng))),
@@ -137,15 +152,24 @@ export default function CommercialMap({initialConditions,onConditionsChange,onOp
     return ()=>{circle.current?.setMap(null);circle.current=null;};
   },[range,selectedId,displayed,mapStatus]);
 
+  function areasInViewport(areas,[west,south,east,north]){
+    return areas.filter(area=>{
+      const feature=featureByKey.get(regionKey(area.region,area.name.slice(area.region.length+1)));if(!feature)return false;
+      const box=geometryBounds(feature.geometry);
+      return box[0]<=east&&box[2]>=west&&box[1]<=north&&box[3]>=south;
+    }).map(area=>area.id);
+  }
   function searchViewport(){
     if(!map.current||!data)return;
     const bounds=map.current.getBounds(),sw=bounds.getSouthWest(),ne=bounds.getNorthEast();
-    const ids=data.areas.filter(area=>{
-      const feature=featureByKey.get(regionKey(area.region,area.name.slice(area.region.length+1)));if(!feature)return false;
-      const box=geometryBounds(feature.geometry);
-      return box[0]<=ne.getLng()&&box[2]>=sw.getLng()&&box[1]<=ne.getLat()&&box[3]>=sw.getLat();
-    }).map(area=>area.id);
-    setViewportIds(ids);
+    const viewBounds=[sw.getLng(),sw.getLat(),ne.getLng(),ne.getLat()];
+    setPinAreaId(null);
+    if(filters.industry!==data.conditions.industry){
+      search(filters,viewBounds);
+      return;
+    }
+    setViewportIds(areasInViewport(data.areas,viewBounds));
+    setAppliedScore(filters.score);setRange(filters.range);
   }
   function locate(){
     if(!map.current||!navigator.geolocation)return;
@@ -168,20 +192,23 @@ export default function CommercialMap({initialConditions,onConditionsChange,onOp
       <div ref={canvas} className="business-map-canvas" aria-label="부산 상권 지도"/>
       {mapStatus!=='ready'&&<div className="business-map-unavailable" role="status"><strong>{mapStatus==='loading'?'카카오맵을 불러오고 있어요':'카카오맵을 불러올 수 없습니다'}</strong><span>{mapStatus==='key'?'카카오맵 키와 웹 도메인 설정을 확인해 주세요.':'지역 목록에서 상권 정보를 확인할 수 있습니다.'}</span></div>}
       <div className="map-location-bar"><img src={`${icons}pin.svg`} alt=""/><span>부산광역시</span><span>›</span><select aria-label="지도 지역" value={data?.districts.includes(filters.region)?filters.region:''} onChange={event=>{const next={...filters,region:event.target.value};setFilters(next);search(next);}}><option value="">{viewportIds?'현 지도 범위':data?.resolvedRegion||filters.region}</option>{data?.districts.map(district=><option key={district}>{district}</option>)}</select><img src={`${icons}chevron.svg`} alt=""/></div>
-      <button className="map-search-viewport" type="button" disabled={mapStatus!=='ready'} onClick={searchViewport}>현 지도에서 재검색</button>
+      <button className="map-search-viewport" type="button" disabled={mapStatus!=='ready'||loading||!data} onClick={searchViewport}>현 지도에서 재검색</button>
       {loading&&<span className="business-map-loading" role="status">상권 정보를 불러오고 있어요</span>}
       {selected&&<aside className="selected-market-panel" aria-labelledby="selected-market-title">
-        <div className="selected-market-header"><span>선택한 상권</span><button type="button" aria-label="선택 상권 닫기" onClick={()=>setSelectedId(null)}><img src={`${icons}close.svg`} alt=""/></button></div>
+        <div className="selected-market-header"><span>선택한 상권</span><button type="button" aria-label="선택 상권 닫기" onClick={()=>{setSelectedId(null);setPinAreaId(null);}}><img src={`${icons}close.svg`} alt=""/></button></div>
         <h2 id="selected-market-title">{selected.name.slice(selected.region.length+1)} 상권</h2><p className="selected-market-address">부산광역시 {selected.name}</p>
         <div className="selected-market-tags">{selected.scores.stability!=null&&<span>안정성 {selected.scores.stability>=70?'높음':`${shown(selected.scores.stability)}점`}</span>}{selected.scores.competition!=null&&<span className="amber">{selected.scores.competition<40?'경쟁 다소 강함':'경쟁 적합'}</span>}</div>
         <div className="selected-market-score"><div><span>상권 종합 점수</span><strong>{selected.score==null?'자료 부족':selected.score>=80?'우수':selected.score>=70?'양호':selected.score>=60?'보통':'검토 필요'}</strong></div><b>{selected.score??'—'}</b><small>/ 100</small></div>
         <dl className="selected-market-metrics"><div><dt>평균 영업기간</dt><dd>{months(selected.historyContext?.averageOperatingMonths)}</dd></div><div><dt>누적 개업 / 폐업</dt><dd>{shown(selected.historyContext?.permitRecords)} / {shown(selected.historyContext?.closureRecords)}</dd></div><div><dt>동일 업종 점포</dt><dd>{shown(selected.metrics.industryStores)}개</dd></div></dl>
+        {pinArea&&mapStatus==='ready'&&industryCodes.length>0&&<StoreLocationPins
+          key={`${pinArea.id}-${industryCodes.join(',')}-${range}`} areaId={pinArea.id} industry={data.matchedIndustry}
+          industryCodes={industryCodes} range={range} center={pinCenter} map={map.current} maps={sdk.current.maps}/>}
         <p className="selected-market-reason">{panelReason(selected)}</p>
         <button className="primary selected-market-detail" type="button" onClick={()=>onOpenDetail(selected,data)}><span>상권 상세 보기</span><img src={`${icons}arrow-right.svg`} alt=""/></button>
       </aside>}
       <div className="business-map-controls"><div><button type="button" aria-label="지도 확대" disabled={mapStatus!=='ready'} onClick={()=>map.current.setLevel(map.current.getLevel()-1)}><img src={`${icons}plus.svg`} alt=""/></button><button type="button" aria-label="지도 축소" disabled={mapStatus!=='ready'} onClick={()=>map.current.setLevel(map.current.getLevel()+1)}><img src={`${icons}minus.svg`} alt=""/></button></div><button type="button" aria-label="내 위치로 이동" disabled={mapStatus!=='ready'} onClick={locate}><img src={`${icons}locate.svg`} alt=""/></button></div>
     </div>
     <div className="business-map-footer"><span>점수·선택 영역은 행정동 기준입니다.</span><a href="https://github.com/vuski/admdongkor" target="_blank" rel="noreferrer">경계: SGIS · vuski/admdongkor, 2026.10 · CC BY 4.0</a></div>
-    {(mapStatus!=='ready'||!displayed.length)&&<div className="business-map-region-list" aria-label="지도 상권 목록">{displayed.map(area=><button key={area.id} type="button" aria-pressed={selectedId===area.id} onClick={()=>{setSelectedId(area.id);focusArea.current?.(area.id);}}><span>{area.name}</span><strong>{area.score==null?'자료 부족':`${area.score}점`}</strong></button>)}{data&&!displayed.length&&<p>조건에 맞는 상권이 없습니다.</p>}</div>}
+    {(mapStatus!=='ready'||!displayed.length)&&<div className="business-map-region-list" aria-label="지도 상권 목록">{displayed.map(area=><button key={area.id} type="button" aria-pressed={selectedId===area.id} onClick={()=>selectArea(area.id)}><span>{area.name}</span><strong>{area.score==null?'자료 부족':`${area.score}점`}</strong></button>)}{data&&!displayed.length&&<p>조건에 맞는 상권이 없습니다.</p>}</div>}
   </section>;
 }
