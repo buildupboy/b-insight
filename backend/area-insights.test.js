@@ -34,6 +34,8 @@ test('recommendation reasons provide evidence for a strong score and a weak scor
   assert.match(reason, /14곳이 열고 25곳이 닫았어요/);
   assert.doesNotMatch(reason, /카페/);
   assert.doesNotMatch(recommendationReason({...area,score:null},'카페'), /90점/);
+  assert.match(recommendationReason({...area,name:'부산진구 부전1동',region:'부산진구'},'카페'), /^부전1동에는 모든 업종을 합쳐 점포 1,200곳/);
+  assert.match(reason, /^이 행정동에는 모든 업종을 합쳐 점포/);
 });
 
 test('ranked comments cite observed data for each factor and explain the gap to the previous result', () => {
@@ -46,7 +48,10 @@ test('ranked comments cite observed data for each factor and explain the gap to 
   const lines = recommendationComment(area,{industry:'카페',region:'부산진구',rank:2,previousArea:{score:79}});
   assert.equal(lines.length,5);
   assert.match(lines[0], /부산진구.*74점으로 2위.*5점 차이/);
-  assert.match(lines.join('\n'), /카페 점포는 60곳으로 전체의 5%/);
+  assert.match(lines.join('\n'), /카페 점포는 60곳으로 이 행정동 전체 업종 점포의 5%/);
+  const named = recommendationComment({...area,name:'부산진구 부전1동',region:'부산진구'},{industry:'카페',rank:2,previousArea:{score:79}}).join('\n');
+  assert.match(named, /부전1동에는 모든 업종을 합쳐 점포가 1,200곳/);
+  assert.match(named, /카페 점포는 60곳으로 부전1동 전체 업종 점포의 5%/);
   assert.match(lines.join('\n'), /평균 55.2개월/);
   assert.match(lines.join('\n'), /2022-07~2023-06.*폐업이 11건 더 많았어요.*-28.2%.*25점/);
   const previousArea = {...area, score:79, scores:{...area.scores,fit:95,growth:50}};
@@ -66,7 +71,7 @@ test('ranked comments distinguish missing data and excluded competition without 
   assert.doesNotMatch(lines.join('\n'), /경쟁 적합도/);
   const unscored = recommendationComment({...area,score:null},{rank:3,industry:'카페'});
   assert.equal(unscored.length,3);
-  assert.match(unscored[1], /카페 점포가 0곳/);
+  assert.match(unscored[1], /전체 업종 점포 100곳 중 카페 점포는 0곳/);
   assert.doesNotMatch(unscored.join('\n'), /3위/);
 });
 

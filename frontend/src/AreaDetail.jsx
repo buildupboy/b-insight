@@ -69,6 +69,17 @@ export default function AreaDetail({area,rank,result,backHref='#results',backLab
           <span>{label}<b>{scores[key]==null?'데이터 부족':`${shown(scores[key])}점 · ${area.effectiveWeights[key]??0}%`}</b></span>
           <div><i style={{width:`${area.effectiveWeights[key]??0}%`}}/></div>
         </div>)}</div>
+        <details className="score-guide">
+          <summary>점수 산정 기준</summary>
+          <p>모든 점수는 부산 전체 행정동과 비교한 상대 점수(0~100점)예요.</p>
+          <ul>
+            <li><b>{scoreLabels.fit}</b> {dong}의 모든 업종 점포 수가 많을수록 높아요.</li>
+            <li><b>{scoreLabels.competition}</b> {dong} 전체 점포 중 {industry} 비중이 낮을수록 높아요.</li>
+            <li><b>{scoreLabels.stability}</b> 폐업한 점포(전체 업종)의 평균 영업기간이 길수록 높아요.</li>
+            <li><b>{scoreLabels.growth}</b> 최근 12개월 개업이 폐업보다 많을수록 높아요(전체 업종).</li>
+          </ul>
+          <p>종합 점수는 각 점수에 위 비중(%)을 곱해 합산했어요.</p>
+        </details>
         {historyContext?.growthPeriod&&<p className="detail-event-period">성장성 평가 기간 {historyContext.growthPeriod.from} ~ {historyContext.growthPeriod.to}</p>}
         <div className="detail-charts">
           <EventTrend key={`${area.id}-${eventMonths}`} trend={events?.rows}/>
