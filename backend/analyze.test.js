@@ -389,4 +389,8 @@ test('map store endpoints reject invalid method, area and industry codes before 
   assert.equal((await dispatch('/api/map-stores?industryCode=I21201&area=wrong')).status,422);
   assert.equal((await dispatch(`/api/map-stores?area=${area}&industryCode=I21`)).status,422);
   assert.equal((await dispatch(`/api/map-stores?area=${area}`)).status,422);
+  assert.equal((await dispatch('/api/map-spots','POST',{})).status,405);
+  assert.equal((await dispatch('/api/map-spots?industryCode=I21201&area=wrong')).status,422);
+  assert.equal((await dispatch(`/api/map-spots?area=${area}&industryCode=I21`)).status,422);
+  assert.equal((await dispatch(`/api/map-spots?area=${area}`)).status,422);
 });

@@ -8,6 +8,12 @@ The `#map` screen follows Figma frame `18:2` in B-sight. Its icons and marker ta
 
 The panel's lifetime operating period and cumulative opening/closure counts retain the existing all-industry history definitions. The store count is the selected industry. Opening a candidate loads its existing full analysis detail; it does not assign a misleading map rank.
 
+## Low-competition spots
+
+Selecting a dong shows a "경쟁이 적은 지점 찾기" button in the panel. `GET /api/map-spots?area=…&industryCode=…` (`backend/spot-recommendation.js`) groups the dong's existing store locations (any industry) into 50 m cells and uses each cell's store centroid as a candidate. For every candidate it counts stores of the selected industry and of all industries within 300 m, including stores in neighbouring dongs, and records the nearest same-industry store within 300 m. Candidates whose 300 m store count is below the dong median are dropped as too quiet. The rest are ranked by fewest same-industry stores, then farthest nearest competitor, then most surrounding stores, and up to three spots at least 150 m apart are returned.
+
+Limits shown on screen: only places that already have a store can become candidates, so new or empty commercial buildings are missed; vacancy, rent and zoning are not used; distances are straight-line; few competitors may mean low demand; and the store data has no collection date.
+
 ## Actual region boundaries
 
 `frontend/public/data/busan-dongs.geojson` contains the 206 Busan administrative dong boundaries from `HangJeongDong_ver20261001.geojson` in [vuski/admdongkor](https://github.com/vuski/admdongkor), dated 2026-10-01, originally supplied by SGIS. Coordinates retain CRS84 longitude/latitude and all original Polygon/MultiPolygon rings, including holes. No rectangular or invented region outlines are used.

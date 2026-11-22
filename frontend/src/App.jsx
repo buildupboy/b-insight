@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import AreaDetail, { scoreLabels, shown } from './AreaDetail.jsx';
 import {recommendationComment} from './area-insights.mjs';
-import {kakaoSearchUrl} from './kakao-map.mjs';
 import CommercialMap from './CommercialMap.jsx';
 import AreaComparison from './AreaComparison.jsx';
 import {loadComparison} from './comparison.mjs';
@@ -23,6 +22,7 @@ export default function App() {
   const [mapConditions,setMapConditions]=useState(null),[detailFromMap,setDetailFromMap]=useState(false);
   const [comparisonConditions,setComparisonConditions]=useState(defaults),[comparisonIds,setComparisonIds]=useState([null,null,null]);
   const [mapComparison,setMapComparison]=useState(null),[detailFromComparison,setDetailFromComparison]=useState(false);
+  const [mapFocusId,setMapFocusId]=useState(null);
   const {saved,error:savedError}=useAuth();
   const [detailFromSaved,setDetailFromSaved]=useState(false);
   const isMap=hash==='#map';
@@ -86,6 +86,12 @@ export default function App() {
   function openComparisonMap(areas,snapshot) {
     setMapConditions(snapshot.conditions);setMapComparison({ids:areas.map(area=>area.id),snapshot});window.location.hash='map';
   }
+  // 분석 조건을 유지한 채 그 동이 속한 구로 상권 지도를 열고, 지도가 뜨면 해당 동을 선택한다.
+  function openAreaMap(area,source=result) {
+    setError('');setMapComparison(null);
+    setMapConditions({...source.conditions,industry:source.matchedIndustry||source.conditions.industry,region:area.region});
+    setMapFocusId(area.id);window.location.hash='map';
+  }
   async function openMapDetail(area,mapData) {
     if(mapData.normalizationBasis){openComparisonDetail(area,mapData);setDetailFromComparison(false);setDetailFromMap(true);return;}
     setLoading(true);setError('');
@@ -118,13 +124,13 @@ export default function App() {
   }
   return <>
     <header className="topbar"><a className="brand brand-home" href="#analysis" aria-label="B-Insight 상권 분석 홈" onClick={()=>{setResult(null);setError('');setChoices([]);setPendingConditions(null);setDetailFromSaved(false);setDetailFromMap(false);setDetailFromComparison(false);}}><span className="brand-logo"><img src="/figma-assets/binsight-logo.svg" alt=""/></span><span>B-Insight</span></a>
-      <nav aria-label="주 메뉴"><a className={!isMap&&!isComparison&&!isSaved?'active':''} href="#analysis" onClick={()=>{setResult(null);setError('');}}>상권 분석</a><a className={isMap?'active':''} href="#map" onClick={()=>{setError('');setMapComparison(null);}}>상권 지도</a><a className={isComparison?'active':''} href="#compare" onClick={()=>{if(!isComparison)openComparison();}}>상권 비교</a><a className={isSaved?'active':''} href="#saved">보관함</a></nav><UserMenu/></header>
+      <nav aria-label="주 메뉴"><a className={!isMap&&!isComparison&&!isSaved?'active':''} href="#analysis" onClick={()=>{setResult(null);setError('');}}>상권 분석</a><a className={isMap?'active':''} href="#map" onClick={()=>{setError('');setMapComparison(null);setMapFocusId(null);}}>상권 지도</a><a className={isComparison?'active':''} href="#compare" onClick={()=>{if(!isComparison)openComparison();}}>상권 비교</a><a className={isSaved?'active':''} href="#saved">보관함</a></nav><UserMenu/></header>
     <main className={isComparison||isSaved?'comparison-layout':isMap?'map-page-layout':result?'results-layout':''} id="analysis">
       {savedError&&<p className="error" role="alert">{savedError}</p>}
       {isComparison?<AreaComparison conditions={comparisonConditions} ids={comparisonIds} onIdsChange={setComparisonIds} onConditionsChange={setComparisonConditions} onOpenDetail={openComparisonDetail} onOpenMap={openComparisonMap} saved={saved}/>:
       isSaved?<SavedAreas onOpenDetail={openSavedDetail}/>:
-      isMap?<CommercialMap initialConditions={mapConditions||result?.conditions} comparisonSelection={mapComparison} onConditionsChange={setMapConditions} onOpenDetail={openMapDetail}/>:
-      selectedArea?<AreaDetail area={selectedArea} rank={detailFromSaved||detailFromMap||detailFromComparison?null:selectedIndex+1} result={result} backHref={detailFromSaved?'#saved':detailFromComparison?'#compare':detailFromMap?'#map':'#results'} backLabel={detailFromSaved?'내 보관함':detailFromComparison?'상권 비교':detailFromMap?'상권 지도':'추천 결과'} onCompare={()=>openComparison(selectedArea)}/>:!result?<><h1>어떤 창업을 준비하고 계신가요?</h1>
+      isMap?<CommercialMap key={mapFocusId??'map'} initialConditions={mapConditions||result?.conditions} comparisonSelection={mapComparison} focusAreaId={mapFocusId} onConditionsChange={setMapConditions} onOpenDetail={openMapDetail}/>:
+      selectedArea?<AreaDetail area={selectedArea} rank={detailFromSaved||detailFromMap||detailFromComparison?null:selectedIndex+1} result={result} backHref={detailFromSaved?'#saved':detailFromComparison?'#compare':detailFromMap?'#map':'#results'} backLabel={detailFromSaved?'내 보관함':detailFromComparison?'상권 비교':detailFromMap?'상권 지도':'추천 결과'} onCompare={()=>openComparison(selectedArea)} onOpenMap={()=>openAreaMap(selectedArea)}/>:!result?<><h1>어떤 창업을 준비하고 계신가요?</h1>
         <div className="analysis-input-tabs" role="tablist" aria-label="상권 분석 입력 방식">
           <button id="natural-tab" type="button" role="tab" aria-selected={inputMode==='natural'} aria-controls="analysis-input-panel" tabIndex={inputMode==='natural'?0:-1} onKeyDown={event=>{if(event.key==='ArrowRight'||event.key==='ArrowLeft'){event.preventDefault();setInputMode('structured');document.getElementById('structured-tab')?.focus();}}} onClick={()=>setInputMode('natural')}>자연어 입력</button>
           <button id="structured-tab" type="button" role="tab" aria-selected={inputMode==='structured'} aria-controls="analysis-input-panel" tabIndex={inputMode==='structured'?0:-1} onKeyDown={event=>{if(event.key==='ArrowRight'||event.key==='ArrowLeft'){event.preventDefault();setInputMode('natural');document.getElementById('natural-tab')?.focus();}}} onClick={()=>setInputMode('structured')}>조건 선택</button>
@@ -162,7 +168,7 @@ export default function App() {
             }).map(line=><li key={line}>{line}</li>)}</ul>
           </div>
 
-          <div className="card-actions"><a className="detail-button" id={`area-link-${area.id}`} href={`#area-${area.id}`}>상세 보기</a><a className="map-link" href={kakaoSearchUrl(area,result.matchedIndustry||conditions.industry)} target="_blank" rel="noreferrer">지도에서 보기 ↗</a><SaveAreaButton area={area} industry={result.matchedIndustry||conditions.industry}/></div>
+          <div className="card-actions"><a className="detail-button" id={`area-link-${area.id}`} href={`#area-${area.id}`}>상세 보기</a><a className="map-link" href="#map" onClick={event=>{event.preventDefault();openAreaMap(area);}}>지도에서 보기</a><SaveAreaButton area={area} industry={result.matchedIndustry||conditions.industry}/></div>
         </article>):<div className="panel empty">선택한 지역의 점포 데이터를 DB에서 확인하지 못했습니다. 구 또는 행정동 이름으로 다시 입력해 주세요.</div>}</div>
           <aside className="side-column"><div className="panel methodology"><h2>점수 항목과 가중치</h2>{Object.entries(scoreLabels).map(([key,label])=>{const weight=result.results[0]?.effectiveWeights[key]??0;return <div className="weight" key={key}><span>{label}<b>{weight}%</b></span><div><i style={{width:`${weight}%`}}/></div></div>;})}</div>
             <div className="panel revise"><h2>분석 조건 수정</h2>{[['industry','업종'],['region','희망 지역']].map(([key,label])=><label key={key}>{label}<input value={key==='industry'&&/^[A-Za-z][0-9]{5}$/.test(conditions[key])?result.matchedIndustry:conditions[key]} onChange={e=>edit(key,e.target.value)}/></label>)}<button className="primary" onClick={e=>analyze(e,true)}>조건 수정 후 재분석</button></div></aside></div>

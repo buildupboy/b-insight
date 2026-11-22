@@ -7,7 +7,8 @@ import { resolveRegion } from './region-lookup.js';
 import { resolveDbIndustry, resolveIndustryIntent } from './industry-match.js';
 import { makeCandidate, rank } from './score.js';
 import { describePreferences } from './preferences.js';
-import { loadRecommendationData, loadIndustryCounts, loadIndustryLocations, RecommendationDbError } from './recommendation-db.js';
+import { loadRecommendationData, loadIndustryCounts, loadIndustryLocations, loadSpotStores, RecommendationDbError } from './recommendation-db.js';
+import { recommendSpots, searchMargin, spotSettings } from './spot-recommendation.js';
 import { loadAreaContexts } from './recommendation-context-db.js';
 import { AuthError, createAuthHandler, decodeAreaId } from './auth.js';
 import {createAnalysisOptionsLoader,validateAnalysisRequest} from './analysis-options.js';
@@ -204,6 +205,14 @@ export async function analyzeComparison(input, repository={loadRecommendationDat
     districts:[...new Set(data.areas.map(row=>row.district_name))].sort((a,b)=>a.localeCompare(b,'ko'))};
 }
 
+function industryCodesFrom(searchParams) {
+  const industryCodes=searchParams.getAll('industryCode');
+  if(!industryCodes.length||industryCodes.length>64||industryCodes.some(code=>!(/^[A-Za-z][0-9]{5}$/).test(code))) {
+    throw new InputError('점포를 조회할 업종 코드가 올바르지 않습니다.');
+  }
+  return [...new Set(industryCodes)];
+}
+
 export const server = createServer(async (request, response) => {
   try {
     const {pathname:requested,searchParams} = new URL(request.url, 'http://localhost');
@@ -222,17 +231,27 @@ export const server = createServer(async (request, response) => {
     if (requested === '/api/map-stores') {
       if(request.method!=='GET')return json(response,405,{error:'GET 요청이 필요합니다.'});
       try {
-        const industryCodes=searchParams.getAll('industryCode');
-        if(!industryCodes.length||industryCodes.length>64||industryCodes.some(code=>!(/^[A-Za-z][0-9]{5}$/).test(code))) {
-          throw new InputError('점포를 조회할 업종 코드가 올바르지 않습니다.');
-        }
+        const industryCodes=industryCodesFrom(searchParams);
         const area=decodeAreaId(searchParams.get('area'));
-        const stores=await loadIndustryLocations(area,[...new Set(industryCodes)]);
+        const stores=await loadIndustryLocations(area,industryCodes);
         response.setHeader('Cache-Control','private, max-age=60');
         return json(response,200,{stores});
       } catch(error) {
         const invalid=error instanceof AuthError || error instanceof InputError;
         return json(response,invalid?422:502,{error:invalid||error instanceof RecommendationDbError?error.message:'점포 위치를 불러오지 못했습니다.'});
+      }
+    }
+    if (requested === '/api/map-spots') {
+      if(request.method!=='GET')return json(response,405,{error:'GET 요청이 필요합니다.'});
+      try {
+        const industryCodes=industryCodesFrom(searchParams);
+        const area=decodeAreaId(searchParams.get('area'));
+        const stores=await loadSpotStores(area,industryCodes,searchMargin(spotSettings.radius));
+        response.setHeader('Cache-Control','private, max-age=60');
+        return json(response,200,recommendSpots(stores,spotSettings));
+      } catch(error) {
+        const invalid=error instanceof AuthError || error instanceof InputError;
+        return json(response,invalid?422:502,{error:invalid||error instanceof RecommendationDbError?error.message:'경쟁이 적은 지점을 계산하지 못했습니다.'});
       }
     }
     if (requested === '/api/comparison-data') {

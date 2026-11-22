@@ -3,12 +3,13 @@ import {loadKakaoSdk} from './kakao-map.mjs';
 import {shown} from './AreaDetail.jsx';
 import {geometryAnchor,geometryBounds,geometryPolygons,matchesScore,panelReason,regionKey,scoreTier} from './commercial-map.mjs';
 import StoreLocationPins from './StoreLocationPins.jsx';
+import LowCompetitionSpots from './LowCompetitionSpots.jsx';
 
 const icons='/figma-assets/map-';
 const defaultFilters={region:'부산진구',industry:'카페',score:'all',range:'boundary'};
 const months=value=>value==null?'데이터 부족':`${Number(value).toLocaleString('ko-KR',{maximumFractionDigits:1})}개월`;
 
-export default function CommercialMap({initialConditions,onConditionsChange,onOpenDetail,comparisonSelection}) {
+export default function CommercialMap({initialConditions,onConditionsChange,onOpenDetail,comparisonSelection,focusAreaId=null}) {
   const [filters,setFilters]=useState({...defaultFilters,region:initialConditions?.region||defaultFilters.region,industry:initialConditions?.industry||defaultFilters.industry});
   const [data,setData]=useState(comparisonSelection?.snapshot??null),[features,setFeatures]=useState([]),[selectedId,setSelectedId]=useState(null);
   const [loading,setLoading]=useState(false),[error,setError]=useState(''),[choices,setChoices]=useState([]);
@@ -16,6 +17,7 @@ export default function CommercialMap({initialConditions,onConditionsChange,onOp
   const [viewportIds,setViewportIds]=useState(comparisonSelection?.ids??null);
   const [pinAreaId,setPinAreaId]=useState(null);
   const canvas=useRef(null),map=useRef(null),sdk=useRef(null),handles=useRef(new Map()),focusArea=useRef(null),circle=useRef(null),requestId=useRef(0);
+  const pendingFocus=useRef(focusAreaId);
   const selected=data?.areas.find(area=>area.id===selectedId) ?? null;
   const featureByKey=useMemo(()=>new Map(features.map(feature=>[regionKey(feature.properties.district_name,feature.properties.dong_name),feature])),[features]);
   const displayed=useMemo(()=>{
@@ -144,6 +146,15 @@ export default function CommercialMap({initialConditions,onConditionsChange,onOp
     }
   },[data,features,mapStatus,featureByKey,viewportIds]);
 
+  // 결과·상세 화면의 "지도에서 보기"로 들어오면, 전체 범위를 맞춘 뒤 그 동을 선택하고 확대한다.
+  useEffect(()=>{
+    const id=pendingFocus.current;
+    if(!id||mapStatus==='loading'||!displayed.some(area=>area.id===id))return;
+    if(mapStatus==='ready'&&!handles.current.has(id))return;
+    pendingFocus.current=null;
+    selectArea(id);
+  },[displayed,mapStatus,features,data,viewportIds]);
+
   useEffect(()=>{
     circle.current?.setMap(null);circle.current=null;
     if(range==='boundary'||!selected||mapStatus!=='ready')return;
@@ -203,6 +214,9 @@ export default function CommercialMap({initialConditions,onConditionsChange,onOp
         {pinArea&&mapStatus==='ready'&&industryCodes.length>0&&<StoreLocationPins
           key={`${pinArea.id}-${industryCodes.join(',')}-${range}`} areaId={pinArea.id} industry={data.matchedIndustry}
           industryCodes={industryCodes} range={range} center={pinCenter} map={map.current} maps={sdk.current.maps}/>}
+        {mapStatus==='ready'&&industryCodes.length>0&&<LowCompetitionSpots
+          key={`${selected.id}-${industryCodes.join(',')}`} areaId={selected.id} dong={selected.name.slice(selected.region.length+1)}
+          industry={data.matchedIndustry} industryCodes={industryCodes} map={map.current} maps={sdk.current.maps}/>}
         <p className="selected-market-reason">{panelReason(selected)}</p>
         <button className="primary selected-market-detail" type="button" onClick={()=>onOpenDetail(selected,data)}><span>상권 상세 보기</span><img src={`${icons}arrow-right.svg`} alt=""/></button>
       </aside>}

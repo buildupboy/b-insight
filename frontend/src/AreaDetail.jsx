@@ -1,7 +1,6 @@
 import React, {useState} from 'react';
 import EventTrend from './EventTrend.jsx';
 import CompetitionMap from './CompetitionMap.jsx';
-import {kakaoSearchUrl} from './kakao-map.mjs';
 import SaveAreaButton from './SaveAreaButton.jsx';
 import {recentEvents, recommendationReason} from './area-insights.mjs';
 
@@ -14,7 +13,7 @@ export const scoreLabels={fit:'지역·업종 적합도',competition:'경쟁 적
 const operatingMonths=value=>value==null?'데이터 부족':`${Number(value).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1})}개월`;
 const percent=value=>value==null?'데이터 부족':`${(value*100).toLocaleString('ko-KR',{maximumFractionDigits:1})}%`;
 
-export default function AreaDetail({area,rank,result,backHref='#results',backLabel='추천 결과',onCompare}) {
+export default function AreaDetail({area,rank,result,backHref='#results',backLabel='추천 결과',onCompare,onOpenMap}) {
   const {metrics,scores,historyContext}=area;
   const [eventMonths,setEventMonths]=useState(12);
   const events=recentEvents(historyContext,eventMonths);
@@ -43,7 +42,7 @@ export default function AreaDetail({area,rank,result,backHref='#results',backLab
         <div className="detail-action-buttons">
           <SaveAreaButton area={area} industry={industry} primary/>
           <button type="button" onClick={onCompare}>기준 상권으로 비교</button>
-          <a className="detail-map-action" href={kakaoSearchUrl(area,industry)} target="_blank" rel="noreferrer">지도에서 보기 ↗</a>
+          <a className="detail-map-action" href="#map" onClick={event=>{event.preventDefault();onOpenMap?.();}}>지도에서 보기</a>
         </div>
       </div>
     </section>

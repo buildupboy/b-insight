@@ -74,3 +74,32 @@ export async function loadIndustryLocations({district, dong}, industryCodes) {
     await client.end().catch(() => {});
   }
 }
+
+// 선택한 동의 점포 범위에 반경만큼 여유를 둔 사각형 안의 모든 점포를 읽는다.
+// 옆 동의 경쟁 점포도 거리 계산에 들어가도록 동 경계 밖까지 조회한다.
+export async function loadSpotStores({district, dong}, industryCodes, margin) {
+  if (!process.env.DATABASE_URL) throw new RecommendationDbError('DATABASE_URL이 설정되지 않았습니다.');
+  const client = new pg.Client({connectionString:process.env.DATABASE_URL,...queryOptions});
+  try {
+    await client.connect();
+    await client.query('BEGIN READ ONLY');
+    const {rows} = await client.query(`WITH bounds AS (
+        SELECT min(latitude) AS south, max(latitude) AS north, min(longitude) AS west, max(longitude) AS east
+        FROM public.stores
+        WHERE district_name = $1 AND dong_name = $2
+          AND latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180)
+      SELECT s.latitude::float8 AS latitude, s.longitude::float8 AS longitude, s.road_address AS address,
+        (s.district_name = $1 AND s.dong_name = $2) AS "inDong",
+        COALESCE(s.industry_code = ANY($3::text[]), false) AS "sameIndustry"
+      FROM public.stores s, bounds b
+      WHERE s.latitude BETWEEN b.south - $4 AND b.north + $4
+        AND s.longitude BETWEEN b.west - $5 AND b.east + $5`, [district,dong,industryCodes,margin.lat,margin.lng]);
+    await client.query('ROLLBACK');
+    return rows;
+  } catch {
+    await client.query('ROLLBACK').catch(() => {});
+    throw new RecommendationDbError('경쟁이 적은 지점을 계산할 점포 위치를 조회할 수 없습니다.');
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
