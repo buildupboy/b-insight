@@ -2,9 +2,9 @@ import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseConditions, validate, InputError, ConditionServiceError } from './conditions.js';
+import { parseConditions, validate, assertPrivateInput, InputError, ConditionServiceError } from './conditions.js';
 import { resolveRegion } from './region-lookup.js';
-import { resolveDbIndustry, resolveIndustryIntent } from './industry-match.js';
+import { resolveDbIndustry, resolveIndustryIntent, industryPromptContext } from './industry-match.js';
 import { makeCandidate, rank } from './score.js';
 import { describePreferences } from './preferences.js';
 import { loadRecommendationData, loadIndustryCounts, loadIndustryLocations, loadSpotStores, RecommendationDbError } from './recommendation-db.js';
@@ -100,15 +100,16 @@ async function readBody(request) {
   try { return JSON.parse(value); } catch { throw new InputError('요청 형식이 올바르지 않습니다.'); }
 }
 export async function analyze(input, repository = { loadRecommendationData, loadIndustryCounts, loadAreaContexts }, resultLimit=3) {
+  assertPrivateInput(input);
   const timing = { conditionExtractionMs:null, dbQueryMs:null, historyQueryMs:null, changeQueryMs:null, scoringMs:null, serverTotalMs:null };
   let conditions;
-  let step = performance.now(), stage = 'conditions';
+  let step = performance.now(), stage = 'database';
   try {
-    conditions = input.conditions ? validate(input.conditions) : await parseConditions(input.prompt);
-    timing.conditionExtractionMs = Math.round(performance.now() - step);
-    step = performance.now(); stage = 'database';
     const data = await repository.loadRecommendationData();
     timing.dbQueryMs = Math.round(performance.now() - step);
+    step = performance.now(); stage = 'conditions';
+    conditions = input.conditions ? validate(input.conditions) : await parseConditions(input.prompt,industryPromptContext(data.industries));
+    timing.conditionExtractionMs = Math.round(performance.now() - step);
     stage = 'matching';
     if (!data.coverage.total || !data.areas.length) throw new RecommendationDbError('Supabase에 추천 가능한 부산 점포가 없습니다.');
     const region = await resolveRegion(input.regionChoice || conditions.region, data.areas);
@@ -119,6 +120,9 @@ export async function analyze(input, repository = { loadRecommendationData, load
     const industry = industryResolution.match;
     if (industryResolution.recovered || input.industryChoice)
       conditions = { ...conditions, industry:industryResolution.requested };
+    // Use the verified name on every subsequent screen and reanalysis request.
+    if (industry.scope === 'small') conditions = { ...conditions, industry:
+      data.industries.filter(row=>row.industry_name===industry.label).length===1 ? industry.label : industry.codes[0] };
     step = performance.now(); stage = 'database-analysis';
     // One existing industry-count query covers every Busan dong; the requested region limits results, not score normalization.
     const [areaCounts,contexts] = await Promise.all([
@@ -183,7 +187,7 @@ export async function analyzeMap(input,repository={loadRecommendationData,loadIn
   const analysis=await analyze({prompt:'상권 지도',conditions:{...conditions,region:'부산 전체'}},
     {...repository,loadRecommendationData:async()=>data},data.areas.length);
   const visible=new Set(scope.areas.map(area=>`${area.district_name}\0${area.dong_name}`));
-  return {conditions,resolvedRegion:scope.label,matchedIndustry:analysis.matchedIndustry,industryCode:analysis.industryCode,
+  return {conditions:{...analysis.conditions,region:conditions.region},resolvedRegion:scope.label,matchedIndustry:analysis.matchedIndustry,industryCode:analysis.industryCode,
     industries:[...new Set(data.industries.map(row=>row.industry_name))].sort((a,b)=>a.localeCompare(b,'ko')),
     districts:[...new Set(data.areas.map(row=>row.district_name))].sort((a,b)=>a.localeCompare(b,'ko')),
     visibleIds:analysis.results.filter(row=>visible.has(`${row.region}\0${row.name.slice(row.region.length+1)}`)).map(row=>row.id),
@@ -270,6 +274,7 @@ export const server = createServer(async (request, response) => {
         choices:error.choices ?? [],choiceType:error.choiceType ?? null});}
     }
     if (requested === '/api/analyze') {
+      response.setHeader('Cache-Control','no-store');
       if (request.method !== 'POST') return json(response, 405, { error:'POST 요청이 필요합니다.' });
       const started = performance.now();
       try {

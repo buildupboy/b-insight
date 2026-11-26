@@ -1,7 +1,8 @@
 import {loadRecommendationData} from './recommendation-db.js';
-import {InputError,validate} from './conditions.js';
+import {InputError,validate,assertPrivateInput} from './conditions.js';
 
 export function validateAnalysisRequest(input) {
+  assertPrivateInput(input);
   if(!input||typeof input!=='object'||Array.isArray(input))throw new InputError('분석 요청을 확인해주세요.');
   if(input.conditions!==undefined) {
     const conditions=validate(input.conditions);

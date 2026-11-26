@@ -28,6 +28,16 @@ export const verifiedFoodFamilies = {
 const koreanFood = verifiedFoodFamilies.I201;
 const preparedFood = Object.values(verifiedFoodFamilies).flat();
 const aliases = new Map([
+  ...[
+    ['I20301','일식 회/초밥',['스시','스시집','초밥','초밥집','스시 전문점','초밥 전문점']],
+    ['I20201','중국집',['중식','중식집','중식당','중화요리','중화요리집','짜장면집','자장면집','짬뽕집']],
+    ['I21201','카페',['커피집','커피점','커피샵']],
+    ['I21006','치킨',['치킨집','통닭집','통닭']],
+    ['I20107','돼지고기 구이/찜',['삼겹살집','삼겹살','돼지고기집','돼지갈비집']],
+    ['I20108','소고기 구이/찜',['소고기집','소갈비집','한우집']],
+    ['I21003','피자',['피자집']],
+    ['I21004','버거',['햄버거집','햄버거','버거집']]
+  ].flatMap(([code,name,terms])=>terms.map(term=>[normalized(term),{code,name}])),
   ['헤어샵',{code:'S20701',name:'미용실'}], ['헤어숍',{code:'S20701',name:'미용실'}],
   ['커피숍',{code:'I21201',name:'카페'}], ['커피전문점',{code:'I21201',name:'카페'}],
   ['네일샵',{code:'S20703',name:'네일숍'}],
@@ -40,6 +50,21 @@ const aliases = new Map([
   ['음식점',{group:preparedFood,label:'음식점·간이음식 전체'}],
   ['식당',{group:preparedFood,label:'음식점·간이음식 전체'}]
 ]);
+
+// Ambiguous meat restaurants must ask for a subtype instead of assuming pork.
+const ambiguousAliases = new Map([
+  ['고깃집',['I20107','I20108','I20110']],
+  ['고기집',['I20107','I20108','I20110']]
+]);
+
+export function industryPromptContext(rows) {
+  const valid=checkedRows(rows);
+  const allowedAliases=[...aliases].filter(([,alias])=>alias.group
+    ? groupMatches(alias.group,valid).length
+    : valid.some(row=>row.industry_code===alias.code&&row.industry_name===alias.name));
+  return {industries:valid,aliases:allowedAliases.map(([term,alias])=>({term,
+    codes:alias.group?alias.group.map(([code])=>code):[alias.code]}))};
+}
 
 export class IndustryMatchError extends InputError {
   constructor(message, choices = []) {
@@ -67,6 +92,10 @@ export function resolveDbIndustry(requested, rows) {
   const name = normalized(requested);
   if (!name) throw new IndustryMatchError('어떤 업종을 생각하고 계신가요? 업종을 입력해 주세요.');
   const valid = checkedRows(rows);
+  if (ambiguousAliases.has(name)) {
+    const choices=valid.filter(row=>ambiguousAliases.get(name).includes(row.industry_code)).map(row=>row.industry_name);
+    throw new IndustryMatchError('고기 종류를 선택해 주세요. 돼지고기·소고기·닭/오리고기 업종이 나뉘어 있습니다.',choices);
+  }
   const exact = valid.filter(row => normalized(row.industry_name) === name || row.industry_code === name);
   if (exact.length > 1) throw new IndustryMatchError(`“${requested}”은 DB에서 여러 코드로 사용됩니다. 업종 분류 확인이 필요합니다.`);
   let matches = exact, label = exact[0]?.industry_name, scope = 'small', note = null;
@@ -97,7 +126,7 @@ export function resolveDbIndustry(requested, rows) {
 
 function promptMentions(prompt, rows) {
   const text = normalized(prompt);
-  const terms = [...new Set([...checkedRows(rows).map(row=>normalized(row.industry_name)),...aliases.keys()])]
+  const terms = [...new Set([...checkedRows(rows).map(row=>normalized(row.industry_name)),...aliases.keys(),...ambiguousAliases.keys()])]
     .filter(term=>term.length>1).sort((a,b)=>b.length-a.length);
   const hits=[];
   for (const term of terms) {
@@ -105,7 +134,7 @@ function promptMentions(prompt, rows) {
     while (start>=0) {
       const end=start+term.length;
       const suffix=text.slice(end);
-      if ((!suffix || /^(?:을|를|이|가|은|는|으로|로|이나|나|또는|혹은|와|과|중|창업|열|차리|시작|하고|해|,)/.test(suffix)) &&
+      if ((!suffix || /^(?:을|를|이|가|은|는|으로|로|이나|나|또는|혹은|와|과|중|창업|열|차리|시작|하고|해|추천|,)/.test(suffix)) &&
         !hits.some(hit=>start<hit.end && end>hit.start)) hits.push({term,start,end});
       start=text.indexOf(term,start+1);
     }
@@ -132,12 +161,16 @@ export function resolveIndustryIntent(extracted, prompt, rows) {
   const distinct=[...byCode.values()];
   const alternative=classified.some((hit,index)=>index>0 &&
     hit.match.codes.join(',')!==classified[index-1].match.codes.join(',') &&
-    /^(?:이나|나|또는|혹은|와|과|,)$/i.test(normalized(prompt).slice(classified[index-1].end,hit.start)));
+    /^(?:(?:이나|나|또는|혹은|와|과|,))+$/i.test(normalized(prompt).slice(classified[index-1].end,hit.start)));
   if (alternative || (!normalized(extracted) && distinct.length>1)) {
     const choices=[...new Set(distinct.map(hit=>hit.term))];
     throw new IndustryMatchError('여러 업종을 말씀하셨어요. 분석할 업종을 하나 선택해 주세요.',choices);
   }
-  const requested=normalized(extracted) ? extracted : distinct[0]?.term ?? explicitUnknownPhrase(prompt);
+  // An explicit, unambiguous alias wins over a broader model interpretation.
+  // Negated mentions are left to the model rather than treated as a selection.
+  const explicit=distinct.length===1 && aliases.has(distinct[0].term) &&
+    !/말고|아니|않|제외|빼고/.test(String(prompt)) ? distinct[0].term : null;
+  const requested=explicit ?? (normalized(extracted) ? extracted : distinct[0]?.term ?? explicitUnknownPhrase(prompt));
   try {
     return { requested, match:resolveDbIndustry(requested,rows), recovered:!normalized(extracted) && Boolean(requested) };
   } catch(error) {

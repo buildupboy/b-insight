@@ -676,3 +676,60 @@ button:disabled { cursor:wait; opacity:.6; }
   .structured-conditions .primary { justify-content:center; }
   .search-select .search-select-popup { left:0; right:auto; width:100%; max-width:100%; }
 }
+
+/* Let content shrink within its own layout; wide tables/charts scroll locally. */
+main, .results-grid > *, .ranked, .side-column,
+.business-map-page, .comparison-scroll, .detail-identity, .detail-actions,
+.detail-charts section, .metric-tiles > div { min-width:0; }
+.comparison-scroll { max-width:100%; }
+.panel, .error, .tag, .chip, .provenance, .business-map-footer { overflow-wrap:anywhere; }
+.analysis-dialog, .auth-dialog, .comparison-dialog {
+  max-height:calc(100dvh - 32px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+.analysis-dialog > * { flex-shrink:0; max-width:100%; }
+
+@media(max-width:760px) {
+  .topbar .brand { flex:0 1 auto; min-width:0; white-space:nowrap; }
+  .topbar .user { min-width:0; margin-left:auto; }
+  .topbar nav { min-width:0; }
+  .condition .value { height:auto; min-height:44px; overflow-wrap:anywhere; }
+  .business-region-input, .map-filter-select { min-width:0; max-width:100%; }
+  .map-filter-select select { min-width:0; flex:1; }
+  .selected-market-panel > *, .selected-market-metrics > * { min-width:0; }
+  .selected-market-header { gap:8px; flex-wrap:wrap; }
+  .selected-market-panel { overflow-wrap:anywhere; }
+}
+@media(max-width:520px) {
+  .topbar { padding:12px 16px; gap:12px 8px; }
+  .topbar .brand { font-size:18px; }
+  .brand-logo { width:32px; height:29px; }
+  .brand-logo img { transform:scale(.05948); }
+  .auth-header-actions { gap:4px; }
+  .auth-header-actions > button { padding:0 8px; font-size:12px; }
+  .topbar nav { gap:8px; }
+  .topbar nav a { font-size:12px; }
+  .area { min-width:0; flex-basis:calc(100% - 60px); }
+  .area h2 { overflow-wrap:anywhere; }
+  .total-score { max-width:100%; }
+  .metric-tiles strong { overflow-wrap:anywhere; }
+  .card-actions > * { max-width:100%; }
+  .detail-identity h1 { font-size:26px; overflow-wrap:anywhere; }
+  .detail-action-buttons > * { max-width:100%; }
+  .detail-score { flex-wrap:wrap; }
+  .detail-weights { grid-template-columns:minmax(0,1fr); }
+  .detail-map-title, .detail-chart-legend, .detail-industry-legend div { flex-wrap:wrap; }
+  .detail-value { white-space:normal; overflow-wrap:anywhere; }
+  .saved-area-list { grid-template-columns:minmax(0,1fr); }
+  .saved-card { padding:18px; }
+  .analysis-input-tabs { max-width:100%; }
+  .analysis-input-tabs button { padding:0 14px; }
+  .business-map-filters .map-filter-select { flex-basis:100%; }
+  .map-search-viewport { max-width:calc(100% - 24px); padding:0 12px; }
+  .selected-market-metrics { grid-template-columns:minmax(0,1fr); }
+  .comparison-dialog { padding:18px; }
+  .comparison-dialog-head { gap:8px; }
+  .comparison-picker-filters select { max-width:100%; }
+  .comparison-picker-list button { flex-wrap:wrap; gap:6px; overflow-wrap:anywhere; }
+}
