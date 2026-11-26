@@ -152,3 +152,5 @@ vite.config.ts.timestamp-*
 **/dist/
 .DS_Store
 Thumbs.db
+.store-collection/
+.district-dong-backfill/

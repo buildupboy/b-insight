@@ -3,13 +3,19 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "migrate:auth": "node --env-file=.env backend/migrate-auth.js",
+    "test:auth:db": "node --env-file=.env --test backend/auth-db.test.js",
     "dev": "node --watch --env-file=.env backend/server.js",
     "build": "vite build frontend",
     "test": "node --test backend/*.test.js",
     "diagnose:data": "node --env-file=.env backend/diagnose.js",
-    "start": "node --env-file=.env backend/server.js"
+    "prepare:history": "node --env-file=.env backend/prepare-history-summary.js",
+    "start": "node --env-file=.env backend/server.js",
+    "collect:stores": "node --env-file=.env backend/collect-stores.js",
+    "collect:stores:save": "node --env-file=.env backend/collect-stores.js --save"
   },
   "dependencies": {
+    "pg": "^8.23.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

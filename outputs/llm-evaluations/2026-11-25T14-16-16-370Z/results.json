@@ -1,0 +1,3961 @@
+{
+  "startedAt": "2026-11-25T14:16:16.371Z",
+  "model": "gpt-4o-mini",
+  "planned": 100,
+  "repetitions": 1,
+  "datasetSha256": "ca34ffb95b5d1602000bb790060dc60530ec582a2d47caec8a5ab1d59f5f0a9f",
+  "sourceSha256": "2010471a0be002bc798317b32cda9e77147671d24d434fa8037ffcdad74441ff",
+  "rules": {
+    "coreFields": [
+      "industry",
+      "region",
+      "competition",
+      "stability",
+      "growth"
+    ],
+    "fullFields": [
+      "industry",
+      "region",
+      "competition",
+      "stability",
+      "growth",
+      "populationRequested",
+      "populationTypes",
+      "budget"
+    ],
+    "threshold": 90,
+    "method": "문장별 모든 필드 일치. 평가 전 명시한 대체 표현만 허용하며 인구 종류는 집합 비교. 필드 누락·해석 거부는 오답, 접속·인증·서버 장애는 환경 차단. 전체100건 평가 전에는 최종 통과 선언 없음."
+  },
+  "results": [
+    {
+      "id": "AI-001",
+      "category": "기본 조건",
+      "prompt": "카페를 창업하고 싶어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1873
+    },
+    {
+      "id": "AI-002",
+      "category": "기본 조건",
+      "prompt": "부산진구에서 카페를 열고 싶어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산진구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산진구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1197
+    },
+    {
+      "id": "AI-003",
+      "category": "기본 조건",
+      "prompt": "해운대구에서 미용실을 창업하려고 해요.",
+      "expected": {
+        "industry": "미용실",
+        "region": "해운대구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "미용실",
+        "region": "해운대구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1241
+    },
+    {
+      "id": "AI-004",
+      "category": "기본 조건",
+      "prompt": "사하구에서 편의점을 열고 싶어요.",
+      "expected": {
+        "industry": "편의점",
+        "region": "사하구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "편의점",
+        "region": "사하구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1174
+    },
+    {
+      "id": "AI-005",
+      "category": "기본 조건",
+      "prompt": "동래구에서 네일숍을 창업하고 싶어요.",
+      "expected": {
+        "industry": "네일숍",
+        "region": "동래구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "네일숍",
+        "region": "동래구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1085
+    },
+    {
+      "id": "AI-006",
+      "category": "기본 조건",
+      "prompt": "부전2동에서 카페를 열고 싶어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부전2동",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부전2동",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1020
+    },
+    {
+      "id": "AI-007",
+      "category": "기본 조건",
+      "prompt": "하단1동에서 분식집을 창업하고 싶어요.",
+      "expected": {
+        "industry": "분식집",
+        "region": "하단1동",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "분식집",
+        "region": "하단1동",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1010
+    },
+    {
+      "id": "AI-008",
+      "category": "기본 조건",
+      "prompt": "서면에서 카페를 창업하고 싶어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "서면",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "서면",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1156
+    },
+    {
+      "id": "AI-009",
+      "category": "기본 조건",
+      "prompt": "센텀시티에서 빵집을 열고 싶어요.",
+      "expected": {
+        "industry": "빵집",
+        "region": "센텀시티",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "빵집",
+        "region": "센텀시티",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1126
+    },
+    {
+      "id": "AI-010",
+      "category": "기본 조건",
+      "prompt": "부산역 근처에서 커피숍을 열고 싶어요.",
+      "expected": {
+        "industry": "커피숍",
+        "region": "부산역",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "accepted": {
+        "region": [
+          "부산역",
+          "부산역 근처"
+        ]
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "커피숍",
+        "region": "부산역",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1226
+    },
+    {
+      "id": "AI-011",
+      "category": "선호 조건",
+      "prompt": "카페를 열 건데 경쟁이 적은 곳을 추천해줘.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "low",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "low",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1401
+    },
+    {
+      "id": "AI-012",
+      "category": "선호 조건",
+      "prompt": "부산진구에서 카페를 열고 싶고 같은 업종이 적은 곳을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산진구",
+        "competition": "low",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산진구",
+        "competition": "low",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1365
+    },
+    {
+      "id": "AI-013",
+      "category": "선호 조건",
+      "prompt": "해운대구에서 미용실을 열고 싶어요. 경쟁은 신경 쓰지 않아요.",
+      "expected": {
+        "industry": "미용실",
+        "region": "해운대구",
+        "competition": "any",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "미용실",
+        "region": "해운대구",
+        "competition": "any",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1214
+    },
+    {
+      "id": "AI-014",
+      "category": "선호 조건",
+      "prompt": "사하구에서 카페를 열고 싶고 경쟁 강도는 보통으로 해주세요.",
+      "expected": {
+        "industry": "카페",
+        "region": "사하구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "사하구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 933
+    },
+    {
+      "id": "AI-015",
+      "category": "선호 조건",
+      "prompt": "카페를 창업하고 싶고 안정적인 곳을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1109
+    },
+    {
+      "id": "AI-016",
+      "category": "선호 조건",
+      "prompt": "동래구에서 편의점을 열고 오래 영업할 수 있는 곳을 원해요.",
+      "expected": {
+        "industry": "편의점",
+        "region": "동래구",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "편의점",
+        "region": "동래구",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1068
+    },
+    {
+      "id": "AI-017",
+      "category": "선호 조건",
+      "prompt": "카페 창업을 준비 중이고 성장하는 상권을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1105
+    },
+    {
+      "id": "AI-018",
+      "category": "선호 조건",
+      "prompt": "수영구에서 네일숍을 열고 확대되는 상권을 원해요.",
+      "expected": {
+        "industry": "네일숍",
+        "region": "수영구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "네일숍",
+        "region": "수영구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1021
+    },
+    {
+      "id": "AI-019",
+      "category": "선호 조건",
+      "prompt": "부산진구에서 카페를 열고 싶어요. 경쟁이 적고 안정적인 곳을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산진구",
+        "competition": "low",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산진구",
+        "competition": "low",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1134
+    },
+    {
+      "id": "AI-020",
+      "category": "선호 조건",
+      "prompt": "사하구에서 카페를 열고 싶어요. 경쟁이 적고 안정적이며 성장하는 상권을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "사하구",
+        "competition": "low",
+        "stability": "important",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "사하구",
+        "competition": "low",
+        "stability": "important",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 938
+    },
+    {
+      "id": "AI-021",
+      "category": "인구와 예산",
+      "prompt": "카페를 열고 싶어요. 인구밀도가 높은 곳을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "density"
+        ],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "density"
+        ],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1056
+    },
+    {
+      "id": "AI-022",
+      "category": "인구와 예산",
+      "prompt": "남구에서 카페를 열고 싶어요. 거주인구가 많은 곳을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "남구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "resident"
+        ],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "남구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "resident"
+        ],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 974
+    },
+    {
+      "id": "AI-023",
+      "category": "인구와 예산",
+      "prompt": "연제구에서 편의점을 열고 싶어요. 생활인구가 많은 곳을 원해요.",
+      "expected": {
+        "industry": "편의점",
+        "region": "연제구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "living"
+        ],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "편의점",
+        "region": "연제구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "living"
+        ],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1198
+    },
+    {
+      "id": "AI-024",
+      "category": "인구와 예산",
+      "prompt": "서면에서 카페를 열고 싶어요. 유동인구가 많은 곳을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "서면",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "floating"
+        ],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "서면",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "floating"
+        ],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 949
+    },
+    {
+      "id": "AI-025",
+      "category": "인구와 예산",
+      "prompt": "카페를 열고 싶고 거주인구와 유동인구가 모두 많은 곳을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "resident",
+          "floating"
+        ],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "resident",
+          "floating"
+        ],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 895
+    },
+    {
+      "id": "AI-026",
+      "category": "인구와 예산",
+      "prompt": "카페를 열고 싶고 사람이 많은 곳을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "unspecified"
+        ],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "unspecified"
+        ],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1022
+    },
+    {
+      "id": "AI-027",
+      "category": "인구와 예산",
+      "prompt": "카페를 열고 싶고 점포 밀집도가 높은 곳을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1069
+    },
+    {
+      "id": "AI-028",
+      "category": "인구와 예산",
+      "prompt": "카페를 열고 싶어요. 예산은 50000000원이에요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": 50000000
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": 50000000
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1058
+    },
+    {
+      "id": "AI-029",
+      "category": "인구와 예산",
+      "prompt": "부산진구에서 카페를 열고 싶어요. 예산은 아직 정하지 않았어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산진구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산진구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1008
+    },
+    {
+      "id": "AI-030",
+      "category": "인구와 예산",
+      "prompt": "해운대구에서 미용실을 열고 싶어요. 생활인구와 인구밀도가 높은 곳을 원해요.",
+      "expected": {
+        "industry": "미용실",
+        "region": "해운대구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "living",
+          "density"
+        ],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "미용실",
+        "region": "해운대구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "living",
+          "density"
+        ],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1269
+    },
+    {
+      "id": "AI-031",
+      "category": "간접적인 선호 표현",
+      "prompt": "카페를 열 건데 주변에 비슷한 가게가 너무 많지 않았으면 해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "low",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "rejected",
+      "error": {
+        "name": "Error",
+        "message": "입력한 지역을 AI가 확인하지 못했습니다. 부산의 구 또는 행정동을 구체적으로 입력해 주세요.",
+        "transport": null
+      },
+      "corePass": false,
+      "fullPass": false,
+      "elapsedMs": 1238
+    },
+    {
+      "id": "AI-032",
+      "category": "간접적인 선호 표현",
+      "prompt": "미용실을 열고 싶어요. 같은 업종끼리 치열하게 경쟁하는 곳은 피하고 싶어요.",
+      "expected": {
+        "industry": "미용실",
+        "region": "부산 전체",
+        "competition": "low",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "미용실",
+        "region": "부산 전체",
+        "competition": "low",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1084
+    },
+    {
+      "id": "AI-033",
+      "category": "간접적인 선호 표현",
+      "prompt": "카페를 열고 싶어요. 경쟁이 있든 없든 괜찮아요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "any",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "any",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1301
+    },
+    {
+      "id": "AI-034",
+      "category": "간접적인 선호 표현",
+      "prompt": "카페를 열고 싶어요. 주변에 같은 업종이 몇 개 있는지는 중요하지 않아요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "any",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "any",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1395
+    },
+    {
+      "id": "AI-035",
+      "category": "간접적인 선호 표현",
+      "prompt": "카페를 열고 싶어요. 금방 문을 닫을 위험이 낮은 곳이 좋아요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1063
+    },
+    {
+      "id": "AI-036",
+      "category": "간접적인 선호 표현",
+      "prompt": "분식집을 열고 싶어요. 오래 버틸 수 있는 안정적인 상권이면 좋겠어요.",
+      "expected": {
+        "industry": "분식집",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "rejected",
+      "error": {
+        "name": "Error",
+        "message": "입력한 지역을 AI가 확인하지 못했습니다. 부산의 구 또는 행정동을 구체적으로 입력해 주세요.",
+        "transport": null
+      },
+      "corePass": false,
+      "fullPass": false,
+      "elapsedMs": 1015
+    },
+    {
+      "id": "AI-037",
+      "category": "간접적인 선호 표현",
+      "prompt": "카페를 열고 싶어요. 지금보다 앞으로 더 커지는 상권을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1251
+    },
+    {
+      "id": "AI-038",
+      "category": "간접적인 선호 표현",
+      "prompt": "편의점을 열고 싶어요. 점점 성장하는 지역이면 좋겠어요.",
+      "expected": {
+        "industry": "편의점",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "rejected",
+      "error": {
+        "name": "Error",
+        "message": "입력한 지역을 AI가 확인하지 못했습니다. 부산의 구 또는 행정동을 구체적으로 입력해 주세요.",
+        "transport": null
+      },
+      "corePass": false,
+      "fullPass": false,
+      "elapsedMs": 1193
+    },
+    {
+      "id": "AI-039",
+      "category": "간접적인 선호 표현",
+      "prompt": "카페를 열고 싶어요. 경쟁은 적고 오래 영업할 수 있으면 좋겠어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "low",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "rejected",
+      "error": {
+        "name": "Error",
+        "message": "입력한 지역을 AI가 확인하지 못했습니다. 부산의 구 또는 행정동을 구체적으로 입력해 주세요.",
+        "transport": null
+      },
+      "corePass": false,
+      "fullPass": false,
+      "elapsedMs": 1180
+    },
+    {
+      "id": "AI-040",
+      "category": "간접적인 선호 표현",
+      "prompt": "네일숍을 열고 싶어요. 경쟁 여부는 상관없고 성장하는 곳을 원해요.",
+      "expected": {
+        "industry": "네일숍",
+        "region": "부산 전체",
+        "competition": "any",
+        "stability": "normal",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "네일숍",
+        "region": "부산 전체",
+        "competition": "any",
+        "stability": "normal",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1468
+    },
+    {
+      "id": "AI-041",
+      "category": "부정과 선호 미지정",
+      "prompt": "카페를 열고 싶어요. 경쟁이 적은 곳을 특별히 원하는 건 아니에요. 경쟁 선호는 보통이에요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1234
+    },
+    {
+      "id": "AI-042",
+      "category": "부정과 선호 미지정",
+      "prompt": "카페를 열고 싶어요. 경쟁이 적어야 한다는 조건은 없고 경쟁 여부는 상관없어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "any",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "any",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1508
+    },
+    {
+      "id": "AI-043",
+      "category": "부정과 선호 미지정",
+      "prompt": "카페를 열고 싶어요. 안정성을 특별히 우선하지는 않아요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 875
+    },
+    {
+      "id": "AI-044",
+      "category": "부정과 선호 미지정",
+      "prompt": "카페를 열고 싶어요. 성장성을 특별히 중요하게 보지는 않아요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1031
+    },
+    {
+      "id": "AI-045",
+      "category": "부정과 선호 미지정",
+      "prompt": "카페를 열고 싶어요. 안정성보다 성장성을 중요하게 보고 안정성은 보통으로 해주세요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1210
+    },
+    {
+      "id": "AI-046",
+      "category": "부정과 선호 미지정",
+      "prompt": "카페를 열고 싶어요. 성장성보다 안정성을 중요하게 보고 성장성은 보통으로 해주세요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1033
+    },
+    {
+      "id": "AI-047",
+      "category": "부정과 선호 미지정",
+      "prompt": "카페를 열고 싶어요. 경쟁이 낮은 건 필수지만 안정성과 성장성은 보통이면 돼요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "low",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "rejected",
+      "error": {
+        "name": "Error",
+        "message": "입력한 지역을 AI가 확인하지 못했습니다. 부산의 구 또는 행정동을 구체적으로 입력해 주세요.",
+        "transport": null
+      },
+      "corePass": false,
+      "fullPass": false,
+      "elapsedMs": 1160
+    },
+    {
+      "id": "AI-048",
+      "category": "부정과 선호 미지정",
+      "prompt": "카페를 열고 싶어요. 유동인구가 많은 곳을 요구하는 건 아니에요. 인구 조건은 없어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "rejected",
+      "error": {
+        "name": "Error",
+        "message": "입력한 지역을 AI가 확인하지 못했습니다. 부산의 구 또는 행정동을 구체적으로 입력해 주세요.",
+        "transport": null
+      },
+      "corePass": false,
+      "fullPass": false,
+      "elapsedMs": 1150
+    },
+    {
+      "id": "AI-049",
+      "category": "부정과 선호 미지정",
+      "prompt": "카페를 열고 싶어요. 거주인구는 조건이 아니고 유동인구가 많은 곳만 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "floating"
+        ],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "floating"
+        ],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1252
+    },
+    {
+      "id": "AI-050",
+      "category": "부정과 선호 미지정",
+      "prompt": "카페를 열고 싶어요. 인구밀도보다는 거주인구를 조건으로 볼게요. 인구밀도 조건은 빼주세요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "resident"
+        ],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "resident"
+        ],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1043
+    },
+    {
+      "id": "AI-051",
+      "category": "문장 안의 조건 정정",
+      "prompt": "처음엔 미용실을 생각했지만 최종 창업 업종은 카페예요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1149
+    },
+    {
+      "id": "AI-052",
+      "category": "문장 안의 조건 정정",
+      "prompt": "카페를 생각하다가 바꿨어요. 최종적으로 미용실을 창업할 거예요.",
+      "expected": {
+        "industry": "미용실",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "미용실",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 881
+    },
+    {
+      "id": "AI-053",
+      "category": "문장 안의 조건 정정",
+      "prompt": "해운대구를 생각했지만 취소하고 부산진구에서 카페를 열기로 했어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산진구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산진구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1201
+    },
+    {
+      "id": "AI-054",
+      "category": "문장 안의 조건 정정",
+      "prompt": "부산진구 대신 사하구에서 카페를 열고 싶어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "사하구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "사하구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1232
+    },
+    {
+      "id": "AI-055",
+      "category": "문장 안의 조건 정정",
+      "prompt": "카페를 열고 싶어요. 서면이라고 했던 건 취소하고 센텀시티를 희망 지역으로 할게요.",
+      "expected": {
+        "industry": "카페",
+        "region": "센텀시티",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "센텀시티",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1329
+    },
+    {
+      "id": "AI-056",
+      "category": "문장 안의 조건 정정",
+      "prompt": "카페를 열고 싶어요. 경쟁이 적은 곳이라는 조건은 취소하고 경쟁은 상관없음으로 바꿀게요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "any",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "any",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1341
+    },
+    {
+      "id": "AI-057",
+      "category": "문장 안의 조건 정정",
+      "prompt": "카페를 열고 싶어요. 경쟁은 상관없다고 했지만 최종적으로 경쟁이 낮은 곳을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "low",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "low",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1220
+    },
+    {
+      "id": "AI-058",
+      "category": "문장 안의 조건 정정",
+      "prompt": "카페를 열고 싶어요. 성장성 중요는 취소할게요. 안정성만 중요하고 성장성은 보통이에요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 990
+    },
+    {
+      "id": "AI-059",
+      "category": "문장 안의 조건 정정",
+      "prompt": "카페를 열고 싶어요. 유동인구 조건은 취소하고 거주인구가 많은 곳으로 바꿀게요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "resident"
+        ],
+        "budget": null
+      },
+      "status": "rejected",
+      "error": {
+        "name": "Error",
+        "message": "입력한 지역을 AI가 확인하지 못했습니다. 부산의 구 또는 행정동을 구체적으로 입력해 주세요.",
+        "transport": null
+      },
+      "corePass": false,
+      "fullPass": false,
+      "elapsedMs": 1112
+    },
+    {
+      "id": "AI-060",
+      "category": "문장 안의 조건 정정",
+      "prompt": "카페를 열고 싶어요. 예산 50000000원은 취소하고 최종 예산은 30000000원이에요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": 30000000
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": 30000000
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1200
+    },
+    {
+      "id": "AI-061",
+      "category": "배경과 실제 요청 구별",
+      "prompt": "친구는 해운대구에서 미용실을 하지만 저는 부산진구에서 카페를 열고 싶어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산진구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산진구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 998
+    },
+    {
+      "id": "AI-062",
+      "category": "배경과 실제 요청 구별",
+      "prompt": "저는 사하구에 살아요. 거주지는 조건이 아니고 희망 지역은 동래구이며 카페를 열고 싶어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "동래구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "동래구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1059
+    },
+    {
+      "id": "AI-063",
+      "category": "배경과 실제 요청 구별",
+      "prompt": "해운대구에서 일했던 적이 있어요. 이번 카페 창업 지역은 부산 전체로 볼게요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "rejected",
+      "error": {
+        "name": "Error",
+        "message": "입력한 지역을 AI가 확인하지 못했습니다. 부산의 구 또는 행정동을 구체적으로 입력해 주세요.",
+        "transport": null
+      },
+      "corePass": false,
+      "fullPass": false,
+      "elapsedMs": 899
+    },
+    {
+      "id": "AI-064",
+      "category": "배경과 실제 요청 구별",
+      "prompt": "주변에서 경쟁이 적은 곳을 권했지만 제 조건은 경쟁 상관없음이에요. 카페를 열고 싶어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "any",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "any",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 937
+    },
+    {
+      "id": "AI-065",
+      "category": "배경과 실제 요청 구별",
+      "prompt": "성장하는 상권이라는 광고를 봤어요. 제 요청은 안정적인 카페 입지이며 성장성 선호는 보통이에요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1118
+    },
+    {
+      "id": "AI-066",
+      "category": "배경과 실제 요청 구별",
+      "prompt": "미용실에 자주 가지만 창업할 업종은 네일숍이에요.",
+      "expected": {
+        "industry": "네일숍",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "네일숍",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1223
+    },
+    {
+      "id": "AI-067",
+      "category": "배경과 실제 요청 구별",
+      "prompt": "카페에서 일해봤지만 제가 창업하려는 업종은 편의점이에요.",
+      "expected": {
+        "industry": "편의점",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "편의점",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1307
+    },
+    {
+      "id": "AI-068",
+      "category": "배경과 실제 요청 구별",
+      "prompt": "부산진구 카페에 대한 보고서를 읽었어요. 제 희망은 남구에서 빵집을 여는 거예요.",
+      "expected": {
+        "industry": "빵집",
+        "region": "남구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "빵집",
+        "region": "남구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 973
+    },
+    {
+      "id": "AI-069",
+      "category": "배경과 실제 요청 구별",
+      "prompt": "유동인구 이야기를 들었지만 그건 제 조건이 아니에요. 카페 업종과 낮은 경쟁만 반영해 주세요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "low",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "rejected",
+      "error": {
+        "name": "Error",
+        "message": "입력한 지역을 AI가 확인하지 못했습니다. 부산의 구 또는 행정동을 구체적으로 입력해 주세요.",
+        "transport": null
+      },
+      "corePass": false,
+      "fullPass": false,
+      "elapsedMs": 1009
+    },
+    {
+      "id": "AI-070",
+      "category": "배경과 실제 요청 구별",
+      "prompt": "이전에 예산이 50000000원이었지만 지금은 예산 미정이에요. 카페를 열고 싶어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 920
+    },
+    {
+      "id": "AI-071",
+      "category": "정보 부족과 과도한 추론 방지",
+      "prompt": "안정적이고 경쟁이 적은 곳에서 창업하고 싶어요.",
+      "expected": {
+        "industry": "",
+        "region": "부산 전체",
+        "competition": "low",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "",
+        "region": "부산 전체",
+        "competition": "low",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1223
+    },
+    {
+      "id": "AI-072",
+      "category": "정보 부족과 과도한 추론 방지",
+      "prompt": "부산진구에서 창업하고 싶어요. 업종은 아직 정하지 않았어요.",
+      "expected": {
+        "industry": "",
+        "region": "부산진구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "",
+        "region": "부산진구",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1022
+    },
+    {
+      "id": "AI-073",
+      "category": "정보 부족과 과도한 추론 방지",
+      "prompt": "창업을 준비 중이에요. 아직 업종도 지역도 정하지 않았어요.",
+      "expected": {
+        "industry": "",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1054
+    },
+    {
+      "id": "AI-074",
+      "category": "정보 부족과 과도한 추론 방지",
+      "prompt": "카페를 열고 싶어요. 좋은 곳을 추천해 주세요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1344
+    },
+    {
+      "id": "AI-075",
+      "category": "정보 부족과 과도한 추론 방지",
+      "prompt": "카페 창업으로 돈을 많이 벌고 싶어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 2127
+    },
+    {
+      "id": "AI-076",
+      "category": "정보 부족과 과도한 추론 방지",
+      "prompt": "카페를 열고 싶어요. 월세가 저렴한 곳을 원해요. 전체 창업 예산은 미정이에요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 2924
+    },
+    {
+      "id": "AI-077",
+      "category": "정보 부족과 과도한 추론 방지",
+      "prompt": "카페를 열고 싶어요. 주차하기 편한 곳을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1249
+    },
+    {
+      "id": "AI-078",
+      "category": "정보 부족과 과도한 추론 방지",
+      "prompt": "카페를 열고 싶어요. 대중교통이 편한 곳을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 4851
+    },
+    {
+      "id": "AI-079",
+      "category": "정보 부족과 과도한 추론 방지",
+      "prompt": "카페를 열고 싶어요. 사람이 많다는 조건은 없고 점포가 밀집한 곳을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 2559
+    },
+    {
+      "id": "AI-080",
+      "category": "정보 부족과 과도한 추론 방지",
+      "prompt": "카페를 열고 싶어요. 조용한 분위기를 원해요. 경쟁이나 인구에 대한 선호는 지정하지 않을게요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "rejected",
+      "error": {
+        "name": "Error",
+        "message": "입력한 지역을 AI가 확인하지 못했습니다. 부산의 구 또는 행정동을 구체적으로 입력해 주세요.",
+        "transport": null
+      },
+      "corePass": false,
+      "fullPass": false,
+      "elapsedMs": 1268
+    },
+    {
+      "id": "AI-081",
+      "category": "지역 원문과 표현 변화",
+      "prompt": "해운대역 근처에서 카페를 열고 싶어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "해운대역",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "accepted": {
+        "region": [
+          "해운대역",
+          "해운대역 근처"
+        ]
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "해운대역",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1323
+    },
+    {
+      "id": "AI-082",
+      "category": "지역 원문과 표현 변화",
+      "prompt": "경성대입구역 근처에서 분식집을 열고 싶어요.",
+      "expected": {
+        "industry": "분식집",
+        "region": "경성대입구역",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "accepted": {
+        "region": [
+          "경성대입구역",
+          "경성대입구역 근처"
+        ]
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "분식집",
+        "region": "경성대입구역",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1342
+    },
+    {
+      "id": "AI-083",
+      "category": "지역 원문과 표현 변화",
+      "prompt": "전포동에서 카페를 열고 싶어요. 행정동은 추측하지 말아주세요.",
+      "expected": {
+        "industry": "카페",
+        "region": "전포동",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "전포동",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1259
+    },
+    {
+      "id": "AI-084",
+      "category": "지역 원문과 표현 변화",
+      "prompt": "중앙동에서 카페를 열고 싶어요. 어느 구인지는 아직 지정하지 않았어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "중앙동",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "중앙동",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1362
+    },
+    {
+      "id": "AI-085",
+      "category": "지역 원문과 표현 변화",
+      "prompt": "존재하지 않는 동에서 카페를 열고 싶어요. 지역 표현은 존재하지 않는 동 그대로예요.",
+      "expected": {
+        "industry": "카페",
+        "region": "존재하지 않는 동",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "존재하지 않는 동",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1333
+    },
+    {
+      "id": "AI-086",
+      "category": "지역 원문과 표현 변화",
+      "prompt": "부산 전체에서 미용실을 열고 싶어요. 경쟁은 상관없어요.",
+      "expected": {
+        "industry": "미용실",
+        "region": "부산 전체",
+        "competition": "any",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "미용실",
+        "region": "부산 전체",
+        "competition": "any",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1054
+    },
+    {
+      "id": "AI-087",
+      "category": "지역 원문과 표현 변화",
+      "prompt": "부산진구 부전2동에서 카페를 열고 싶어요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산진구 부전2동",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산진구 부전2동",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1273
+    },
+    {
+      "id": "AI-088",
+      "category": "지역 원문과 표현 변화",
+      "prompt": "수영구 광안2동에서 네일숍을 열고 싶어요.",
+      "expected": {
+        "industry": "네일숍",
+        "region": "수영구 광안2동",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "네일숍",
+        "region": "수영구 광안2동",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1434
+    },
+    {
+      "id": "AI-089",
+      "category": "지역 원문과 표현 변화",
+      "prompt": "업종: 카페 / 지역: 사하구 / 경쟁: 낮은 곳 / 안정성: 중요 / 성장성: 보통",
+      "expected": {
+        "industry": "카페",
+        "region": "사하구",
+        "competition": "low",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "사하구",
+        "competition": "low",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1196
+    },
+    {
+      "id": "AI-090",
+      "category": "지역 원문과 표현 변화",
+      "prompt": "지역은 무관하고 업종은 카페, 성장성은 중요하게 봐주세요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1257
+    },
+    {
+      "id": "AI-091",
+      "category": "복합 조건과 긴 문장",
+      "prompt": "부산진구에서 카페를 열고 싶어요. 경쟁은 상관없고 안정성과 성장성 모두 중요해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산진구",
+        "competition": "any",
+        "stability": "important",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산진구",
+        "competition": "any",
+        "stability": "important",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 996
+    },
+    {
+      "id": "AI-092",
+      "category": "복합 조건과 긴 문장",
+      "prompt": "남구에서 편의점을 열고 싶어요. 경쟁이 적고 거주인구가 많은 곳을 원해요.",
+      "expected": {
+        "industry": "편의점",
+        "region": "남구",
+        "competition": "low",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "resident"
+        ],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "편의점",
+        "region": "남구",
+        "competition": "low",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "resident"
+        ],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1089
+    },
+    {
+      "id": "AI-093",
+      "category": "복합 조건과 긴 문장",
+      "prompt": "동래구에서 미용실을 열고 싶어요. 안정성이 중요하고 생활인구가 많은 곳을 원해요.",
+      "expected": {
+        "industry": "미용실",
+        "region": "동래구",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "living"
+        ],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "미용실",
+        "region": "동래구",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "living"
+        ],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1263
+    },
+    {
+      "id": "AI-094",
+      "category": "복합 조건과 긴 문장",
+      "prompt": "서면에서 카페를 열고 싶어요. 성장성이 중요하고 유동인구가 많은 곳을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "서면",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "important",
+        "populationRequested": true,
+        "populationTypes": [
+          "floating"
+        ],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "서면",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "important",
+        "populationRequested": true,
+        "populationTypes": [
+          "floating"
+        ],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1208
+    },
+    {
+      "id": "AI-095",
+      "category": "복합 조건과 긴 문장",
+      "prompt": "사하구에서 분식집을 열고 싶어요. 예산은 20000000원이고 경쟁이 적은 곳을 원해요.",
+      "expected": {
+        "industry": "분식집",
+        "region": "사하구",
+        "competition": "low",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": 20000000
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "분식집",
+        "region": "사하구",
+        "competition": "low",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": 20000000
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1116
+    },
+    {
+      "id": "AI-096",
+      "category": "복합 조건과 긴 문장",
+      "prompt": "연제구에서 네일숍을 열고 싶어요. 안정성과 성장성이 중요하고 예산은 40000000원이에요.",
+      "expected": {
+        "industry": "네일숍",
+        "region": "연제구",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": 40000000
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "네일숍",
+        "region": "연제구",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "important",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": 40000000
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1326
+    },
+    {
+      "id": "AI-097",
+      "category": "복합 조건과 긴 문장",
+      "prompt": "카페를 열고 싶어요. 거주인구, 생활인구, 유동인구, 인구밀도가 모두 높은 곳을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "resident",
+          "living",
+          "floating",
+          "density"
+        ],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "resident",
+          "living",
+          "floating",
+          "density"
+        ],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1102
+    },
+    {
+      "id": "AI-098",
+      "category": "복합 조건과 긴 문장",
+      "prompt": "카페를 열고 싶어요. 유동인구가 많고, 다시 말해 유동인구가 풍부한 곳을 원해요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "floating"
+        ],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "normal",
+        "growth": "normal",
+        "populationRequested": true,
+        "populationTypes": [
+          "floating"
+        ],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1463
+    },
+    {
+      "id": "AI-099",
+      "category": "복합 조건과 긴 문장",
+      "prompt": "카페를 열고 싶어요. 안정성이 중요해요. 안정성을 가장 중요하게 봐주세요. 경쟁과 성장성은 보통이에요.",
+      "expected": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "부산 전체",
+        "competition": "normal",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1227
+    },
+    {
+      "id": "AI-100",
+      "category": "복합 조건과 긴 문장",
+      "prompt": "창업 경험은 없고 여러 지역을 알아봤어요. 최종 조건은 해운대구에서 카페 창업, 낮은 경쟁, 안정성 중요, 성장성 보통, 예산 미정이에요. 그 외 조건은 추가하지 말아주세요.",
+      "expected": {
+        "industry": "카페",
+        "region": "해운대구",
+        "competition": "low",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "status": "completed",
+      "actual": {
+        "industry": "카페",
+        "region": "해운대구",
+        "competition": "low",
+        "stability": "important",
+        "growth": "normal",
+        "populationRequested": false,
+        "populationTypes": [],
+        "budget": null
+      },
+      "correct": {
+        "industry": true,
+        "region": true,
+        "competition": true,
+        "stability": true,
+        "growth": true,
+        "populationRequested": true,
+        "populationTypes": true,
+        "budget": true
+      },
+      "corePass": true,
+      "fullPass": true,
+      "elapsedMs": 1253
+    }
+  ],
+  "summary": {
+    "evaluated": 100,
+    "corePass": 90,
+    "fullPass": 90,
+    "coreAccuracy": 90,
+    "fullAccuracy": 90,
+    "blocked": 0,
+    "notRun": 0,
+    "rejected": 10,
+    "fieldAccuracy": {
+      "industry": 90,
+      "region": 90,
+      "competition": 90,
+      "stability": 90,
+      "growth": 90,
+      "populationRequested": 90,
+      "populationTypes": 90,
+      "budget": 90
+    },
+    "categories": {
+      "기본 조건": {
+        "evaluated": 10,
+        "corePass": 10,
+        "fullPass": 10,
+        "coreAccuracy": 100,
+        "fullAccuracy": 100
+      },
+      "선호 조건": {
+        "evaluated": 10,
+        "corePass": 10,
+        "fullPass": 10,
+        "coreAccuracy": 100,
+        "fullAccuracy": 100
+      },
+      "인구와 예산": {
+        "evaluated": 10,
+        "corePass": 10,
+        "fullPass": 10,
+        "coreAccuracy": 100,
+        "fullAccuracy": 100
+      },
+      "간접적인 선호 표현": {
+        "evaluated": 10,
+        "corePass": 6,
+        "fullPass": 6,
+        "coreAccuracy": 60,
+        "fullAccuracy": 60
+      },
+      "부정과 선호 미지정": {
+        "evaluated": 10,
+        "corePass": 8,
+        "fullPass": 8,
+        "coreAccuracy": 80,
+        "fullAccuracy": 80
+      },
+      "문장 안의 조건 정정": {
+        "evaluated": 10,
+        "corePass": 9,
+        "fullPass": 9,
+        "coreAccuracy": 90,
+        "fullAccuracy": 90
+      },
+      "배경과 실제 요청 구별": {
+        "evaluated": 10,
+        "corePass": 8,
+        "fullPass": 8,
+        "coreAccuracy": 80,
+        "fullAccuracy": 80
+      },
+      "정보 부족과 과도한 추론 방지": {
+        "evaluated": 10,
+        "corePass": 9,
+        "fullPass": 9,
+        "coreAccuracy": 90,
+        "fullAccuracy": 90
+      },
+      "지역 원문과 표현 변화": {
+        "evaluated": 10,
+        "corePass": 10,
+        "fullPass": 10,
+        "coreAccuracy": 100,
+        "fullAccuracy": 100
+      },
+      "복합 조건과 긴 문장": {
+        "evaluated": 10,
+        "corePass": 10,
+        "fullPass": 10,
+        "coreAccuracy": 100,
+        "fullAccuracy": 100
+      }
+    },
+    "decision": "PASS"
+  },
+  "finishedAt": "2026-11-25T14:18:20.770Z"
+}

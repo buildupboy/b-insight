@@ -7,11 +7,11 @@ const today = new Date().toISOString().slice(0,10);
 const dong = { adongCd:'26230100', adongNm:'부전1동', signguNm:'부산진구' };
 const complete = rows => ({ rows, rawCount:rows.length, total:rows.length, truncated:false });
 
-test('broad restaurant history maps Busan 외식 category and counts recent opening and closure dates',()=>{
+test('broad restaurant history maps Busan 외식 category and counts opening and closure dates',()=>{
   const result=historyMetrics(complete([
     {bplcnm:'A',rdnwhladdr:'부산진구 부전1동',majornm:'외식',minornm:'한식음식점',upjongnm:'한식 일반 음식점업',apvpermymd:today},
     {bplcnm:'B',rdnwhladdr:'부산진구 부전1동',majornm:'외식',minornm:'한식음식점',upjongnm:'한식 일반 음식점업',dcbymd:today}
-  ]),dong,{label:'음식점'},{industry:'음식점',months:12},[]);
+  ]),dong,{label:'음식점'},{industry:'음식점'},[]);
   assert.equal(result.verified,true);
   assert.equal(result.openings,1);
   assert.equal(result.closures,1);
@@ -20,7 +20,7 @@ test('broad restaurant history maps Busan 외식 category and counts recent open
 test('cafe history matches coffee shop taxonomy in Busan history fields',()=>{
   const result=historyMetrics(complete([
     {bplcnm:'A',rdnwhladdr:'부산 부산진구 부전동 1-2',majornm:'외식',minornm:'커피·음료 ',upjongnm:'비알콜 음료점업',apvpermymd:today}
-  ]),dong,{label:'커피전문점'}, {industry:'카페',months:12},[
+  ]),dong,{label:'커피전문점'}, {industry:'카페'},[
     {adongCd:dong.adongCd,rdnmAdr:'부산광역시 부산진구 부전동 1-2'}
   ]);
   assert.equal(result.verified,true);
@@ -33,7 +33,7 @@ test('세부 업종 표본이 부족하면 행정동 내 외식 대분류 개폐
     majornm:'외식',minornm:'한식음식점',upjongnm:'한식 일반 음식점업',
     ...(i<18?{apvpermymd:today}:{dcbymd:today})
   }));
-  const result=historyMetrics(complete(rows),dong,{label:'카페'},{industry:'카페',months:12},[
+  const result=historyMetrics(complete(rows),dong,{label:'카페'},{industry:'카페'},[
     {adongCd:dong.adongCd,rdnmAdr:'부산광역시 부산진구 부전동 중앙대로 1'}
   ]);
   assert.equal(result.verified,true);
@@ -46,22 +46,40 @@ test('세부 업종 표본이 부족하면 행정동 내 외식 대분류 개폐
 test('도로명 상세주소 차이로 생기는 접두 주소 매칭도 행정동 이력으로 연결한다',()=>{
   const result=historyMetrics(complete([
     {bplcnm:'기록점포',rdnwhladdr:'부산광역시 부산진구 중앙대로 1 2층',majornm:'외식',minornm:'한식음식점',upjongnm:'한식 음식점업',apvpermymd:today}
-  ]),dong,{label:'한식'},{industry:'한식',months:12},[
+  ]),dong,{label:'한식'},{industry:'한식'},[
     {adongCd:dong.adongCd,rdnmAdr:'부산광역시 부산진구 중앙대로 1'}
   ]);
   assert.equal(result.verified,true);
   assert.equal(result.openings,1);
 });
 
-test('stale history is reported with the actual latest 12-month period instead of pretending to be current',()=>{
+test('이력의 전체 관측 기간과 월별 개폐업을 표시한다',()=>{
   const result=historyMetrics(complete([
     {bplcnm:'A',rdnwhladdr:'부산진구 부전1동',majornm:'외식',minornm:'커피·음료',upjongnm:'비알콜 음료점업',apvpermymd:'2022-08-15'},
     {bplcnm:'B',rdnwhladdr:'부산진구 부전1동',majornm:'외식',minornm:'커피·음료',upjongnm:'비알콜 음료점업',dcbymd:'2023-05-20'}
-  ]),dong,{label:'커피전문점'},{industry:'카페',months:12},[]);
+  ]),dong,{label:'커피전문점'},{industry:'카페'},[]);
   assert.equal(result.verified,true);
-  assert.equal(result.period.stale,true);
-  assert.equal(result.period.from,'2022-05-20');
+  assert.equal(result.period.from,'2022-08-15');
   assert.equal(result.period.to,'2023-05-20');
   assert.equal(result.openings,1);
   assert.equal(result.closures,1);
+  assert.equal(result.monthly.length,10);
+  assert.deepEqual(result.monthly.find(row=>row.month==='2022-08'),{month:'2022-08',openings:1,closures:0});
+  assert.deepEqual(result.monthly.at(-1),{month:'2023-05',openings:0,closures:1});
+  assert.equal(result.monthly.reduce((sum,row)=>sum+row.openings+row.closures,0),2);
+});
+
+test('12개월보다 오래된 기록도 집계하고 레거시 months 입력은 무시한다',()=>{
+  const rows=[
+    {bplcnm:'old',rdnwhladdr:'부산진구 부전1동',majornm:'외식',minornm:'커피·음료',upjongnm:'비알콜 음료점업',apvpermymd:'2018-01-10',dcbymd:'2020-02-10'},
+    {bplcnm:'new',rdnwhladdr:'부산진구 부전1동',majornm:'외식',minornm:'커피·음료',upjongnm:'비알콜 음료점업',apvpermymd:'2023-05-20'}
+  ];
+  const baseline=historyMetrics(complete(rows),dong,{label:'커피전문점'},{industry:'카페'},[]);
+  const legacy=historyMetrics(complete(rows),dong,{label:'커피전문점'},{industry:'카페',months:12},[]);
+  assert.deepEqual(legacy,baseline);
+  assert.equal(baseline.openings,2);
+  assert.equal(baseline.closures,1);
+  assert.equal(baseline.period.from,'2018-01-10');
+  assert.equal(baseline.period.to,'2023-05-20');
+  assert.equal(baseline.closedTenureMonths,25);
 });

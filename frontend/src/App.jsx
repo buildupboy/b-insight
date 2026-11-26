@@ -1,64 +1,193 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import AreaDetail, { scoreLabels, shown } from './AreaDetail.jsx';
+import {recommendationComment} from './area-insights.mjs';
+import CommercialMap from './CommercialMap.jsx';
+import AreaComparison from './AreaComparison.jsx';
+import {loadComparison} from './comparison.mjs';
+import {useAuth,UserMenu} from './AuthContext.jsx';
+import SaveAreaButton from './SaveAreaButton.jsx';
+import SavedAreas from './SavedAreas.jsx';
+import AnalysisConditions from './AnalysisConditions.jsx';
+import {hasSensitiveInput,privacyMessage} from '../../shared/input-privacy.mjs';
 
-const examples=['부산 서면에서 카페를 열고 싶어요. 경쟁이 낮고 안정적인 곳을 추천해줘.','해운대에서 음식점 창업을 고민 중이야. 최근 12개월 변화를 반영해줘.'];
-const shown=value=>value==null?'데이터 없음':Number(value).toLocaleString('ko-KR');
-const eventBasis=(area,months)=>{const p=area.metrics.eventPeriod;const scope=area.metrics.eventCategoryScope||'동일 업종 · 행정동 기준';if(!p)return `${scope} · ${months}개월`;return `${scope} · ${p.from} ~ ${p.to} · 이력 ${shown(area.metrics.historyRecords)}건`;};
-const defaults={industry:'',region:'부산 전체',competition:'normal',stability:'normal',growth:'normal',months:12,budget:null};
-const scoreLabels={fit:'지역·업종 적합도',competition:'경쟁 적합도',stability:'안정성',growth:'성장성'};
+const examples=['부산진구에서 카페를 열고 싶어요. 경쟁이 낮은 곳을 추천해줘.','해운대구에서 미용실 창업을 고민 중이야.'];
+const operatingMonths=value=>value==null?'데이터 부족':`${Number(value).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1})}개월`;
+const defaults={industry:'',region:'부산 전체',competition:'normal',stability:'normal',growth:'normal',populationRequested:false,populationTypes:[],budget:null};
 
 export default function App() {
+  const [inputMode,setInputMode]=useState('natural'),[structuredConditions,setStructuredConditions]=useState(defaults);
+  const analysisLock=useRef(false);
   const [prompt,setPrompt]=useState(''),[result,setResult]=useState(null),[conditions,setConditions]=useState(defaults);
-  const [loading,setLoading]=useState(false),[error,setError]=useState(''),[choices,setChoices]=useState([]),[diagnostic,setDiagnostic]=useState(null);
+  const [loading,setLoading]=useState(false),[error,setError]=useState(''),[choices,setChoices]=useState([]),[choiceType,setChoiceType]=useState(null),[pendingConditions,setPendingConditions]=useState(null);
+  const [hash,setHash]=useState(()=>window.location.hash);
+  const [mapConditions,setMapConditions]=useState(null),[detailFromMap,setDetailFromMap]=useState(false);
+  const [comparisonConditions,setComparisonConditions]=useState(defaults),[comparisonIds,setComparisonIds]=useState([null,null,null]);
+  const [mapComparison,setMapComparison]=useState(null),[detailFromComparison,setDetailFromComparison]=useState(false);
+  const [mapFocusId,setMapFocusId]=useState(null);
+  const {saved,error:savedError}=useAuth();
+  const [detailFromSaved,setDetailFromSaved]=useState(false);
+  const isMap=hash==='#map';
+  const isComparison=hash==='#compare',isSaved=hash==='#saved';
+  const loadingDialog=useRef(null);
+  const errorNotice=useRef(null);
+  const lastArea=useRef(null);
+  const selectionRef=useRef({});
+  const selectedIndex=result?.results.findIndex(area=>hash===`#area-${area.id}`)??-1;
+  const selectedArea=selectedIndex>=0?result.results[selectedIndex]:null;
+  useEffect(()=>{
+    const update=()=>setHash(window.location.hash);
+    window.addEventListener('hashchange',update);
+    return ()=>window.removeEventListener('hashchange',update);
+  },[]);
+  useEffect(()=>{
+    if (selectedArea) {
+      lastArea.current=selectedArea.id;
+      window.scrollTo(0,0);
+      document.getElementById('area-detail-title')?.focus({preventScroll:true});
+    } else if (lastArea.current) {
+      document.getElementById(`area-link-${lastArea.current}`)?.focus();
+      lastArea.current=null;
+    }
+  },[selectedArea]);
+  useEffect(()=>{
+    const dialog=loadingDialog.current;
+    if (loading) dialog.showModal();
+    else dialog.close();
+  },[loading]);
+  useEffect(()=>{
+    if (error) errorNotice.current?.scrollIntoView({block:'nearest'});
+  },[error]);
   const edit=(field,value)=>setConditions(current=>({...current,[field]:value}));
-  async function analyze(event,revise=false) {
-    event?.preventDefault();
-    if (!prompt.trim()||loading) return;
-    setLoading(true);setError('');setChoices([]);setDiagnostic(null);
+  async function openSavedDetail(area) {
+    setLoading(true);setError('');
     try {
-      const response=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,...(revise?{conditions}:{})})});
+      const snapshot=await loadComparison({...defaults,industry:area.industry||'카페'});
+      if(!snapshot.areas.some(item=>item.id===area.id))throw new Error('해당 상권의 현재 데이터를 찾을 수 없습니다.');
+      setResult({...snapshot,results:snapshot.areas});setConditions(snapshot.conditions);
+      setDetailFromMap(false);setDetailFromComparison(false);setDetailFromSaved(true);
+      window.location.hash=`area-${area.id}`;
+    }catch(reason){setError(reason.message);}finally{setLoading(false);}
+  }
+  useEffect(()=>{if(hash==='#analysis'){setResult(null);setDetailFromSaved(false);}},[hash]);
+  useEffect(()=>{
+    if(!result&&hash.startsWith('#area-')){
+      const area=saved.find(item=>hash===`#area-${item.id}`);
+      if(area)openSavedDetail(area);
+    }
+  },[hash,saved]);
+  function openComparison(area=null,source=result) {
+    setError('');setComparisonConditions(source?.conditions||mapConditions||conditions);
+    if(area)setComparisonIds([area.id,null,null]);
+    window.location.hash='compare';
+  }
+  function openComparisonDetail(area,snapshot) {
+    setResult({...snapshot,results:snapshot.areas});setConditions(snapshot.conditions);setDetailFromSaved(false);setDetailFromMap(false);setDetailFromComparison(true);
+    window.location.hash=`area-${area.id}`;
+  }
+  function openComparisonMap(areas,snapshot) {
+    setMapConditions(snapshot.conditions);setMapComparison({ids:areas.map(area=>area.id),snapshot});window.location.hash='map';
+  }
+  // 분석 조건을 유지한 채 그 동이 속한 구로 상권 지도를 열고, 지도가 뜨면 해당 동을 선택한다.
+  function openAreaMap(area,source=result) {
+    setError('');setMapComparison(null);
+    setMapConditions({...source.conditions,industry:source.matchedIndustry||source.conditions.industry,region:area.region});
+    setMapFocusId(area.id);window.location.hash='map';
+  }
+  async function openMapDetail(area,mapData) {
+    if(mapData.normalizationBasis){openComparisonDetail(area,mapData);setDetailFromComparison(false);setDetailFromMap(true);return;}
+    setLoading(true);setError('');
+    try {
+      const response=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(75000),
+        body:JSON.stringify({prompt:`${area.name} ${mapData.matchedIndustry}`,conditions:{...mapData.conditions,region:area.name}})});
       const data=await response.json();
-      if (!response.ok) {setChoices(data.choices||[]);setDiagnostic(data.diagnostic||null);throw new Error(data.error||'분석에 실패했습니다.');}
-      setResult(data);setConditions(data.conditions);window.scrollTo({top:0,behavior:'smooth'});
-    } catch(reason) {setError(reason.message);} finally {setLoading(false);}
+      if(!response.ok)throw new Error(data.error||'상권 상세 정보를 불러오지 못했습니다.');
+      setResult(data);setConditions(data.conditions);setDetailFromSaved(false);setDetailFromMap(true);setDetailFromComparison(false);
+      window.location.hash=`area-${area.id}`;
+    }catch(reason){setError(reason.message);}
+    finally{setLoading(false);}
+  }
+  async function analyze(event,revise=false,selection=null,structured=null) {
+    event?.preventDefault();
+    if (analysisLock.current||loading||(!structured&&!revise&&!prompt.trim())) return;
+    const payload=structured?{conditions:structured}:revise?{conditions}:{prompt,...(selection&&pendingConditions?{conditions:pendingConditions}:{}),...(selection?{...selectionRef.current,...selection}:{})};
+    if(hasSensitiveInput(payload)){setError(privacyMessage);return;}
+    analysisLock.current=true;
+    selectionRef.current=selection?{...selectionRef.current,...selection}:{};
+    if (!selection) setPendingConditions(null);
+    setLoading(true);setError('');setChoices([]);setChoiceType(null);
+    try {
+      const response=await fetch('/api/analyze',{method:'POST',signal:AbortSignal.timeout(75000),headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      if (!response.headers.get('Content-Type')?.includes('application/json')) throw new Error('분석 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+      const data=await response.json();
+      if (!response.ok) {setChoices(data.choices||[]);setChoiceType(data.choiceType||null);setPendingConditions(data.conditions||null);throw new Error(data.error||'분석에 실패했습니다.');}
+      setResult(data);setConditions(data.conditions);setPendingConditions(null);setDetailFromSaved(false);setDetailFromMap(false);setDetailFromComparison(false);window.location.hash='results';window.scrollTo({top:0,behavior:'smooth'});
+    } catch(reason) {
+      setError(reason.name==='TimeoutError'?'분석 응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요.':reason.message);
+    } finally {analysisLock.current=false;setLoading(false);}
   }
   return <>
-    <header className="topbar"><div className="brand"><span className="brand-mark" aria-hidden="true"><i/><i/></span>B-Insight</div>
-      <nav aria-label="주 메뉴"><a className="active" href="#analysis">상권 분석</a><a href="#results">상권 지도</a><a href="#results">상권 비교</a><a href="#results">보관함</a></nav><div className="user"><div className="avatar">U</div></div></header>
-    <main className={result?'results-layout':''} id="analysis">
-      {!result?<><h1>어떤 창업을 준비하고 계신가요?</h1>
-        <form className="panel input-panel" onSubmit={analyze}><label className="label" htmlFor="prompt">창업 조건</label>
+    <header className="topbar"><a className="brand brand-home" href="#analysis" aria-label="B-Insight 상권 분석 홈" onClick={()=>{setResult(null);setError('');setChoices([]);setPendingConditions(null);setDetailFromSaved(false);setDetailFromMap(false);setDetailFromComparison(false);}}><span className="brand-logo"><img src="/figma-assets/binsight-logo.svg" alt=""/></span><span>B-Insight</span></a>
+      <nav aria-label="주 메뉴"><a className={!isMap&&!isComparison&&!isSaved?'active':''} href="#analysis" onClick={()=>{setResult(null);setError('');}}>상권 분석</a><a className={isMap?'active':''} href="#map" onClick={()=>{setError('');setMapComparison(null);setMapFocusId(null);}}>상권 지도</a><a className={isComparison?'active':''} href="#compare" onClick={()=>{if(!isComparison)openComparison();}}>상권 비교</a><a className={isSaved?'active':''} href="#saved">보관함</a></nav><UserMenu/></header>
+    <main className={isComparison||isSaved?'comparison-layout':isMap?'map-page-layout':result?'results-layout':''} id="analysis">
+      {savedError&&<p className="error" role="alert">{savedError}</p>}
+      {isComparison?<AreaComparison conditions={comparisonConditions} ids={comparisonIds} onIdsChange={setComparisonIds} onConditionsChange={setComparisonConditions} onOpenDetail={openComparisonDetail} onOpenMap={openComparisonMap} saved={saved}/>:
+      isSaved?<SavedAreas onOpenDetail={openSavedDetail}/>:
+      isMap?<CommercialMap key={mapFocusId??'map'} initialConditions={mapConditions||result?.conditions} comparisonSelection={mapComparison} focusAreaId={mapFocusId} onConditionsChange={setMapConditions} onOpenDetail={openMapDetail}/>:
+      selectedArea?<AreaDetail area={selectedArea} rank={detailFromSaved||detailFromMap||detailFromComparison?null:selectedIndex+1} result={result} backHref={detailFromSaved?'#saved':detailFromComparison?'#compare':detailFromMap?'#map':'#results'} backLabel={detailFromSaved?'내 보관함':detailFromComparison?'상권 비교':detailFromMap?'상권 지도':'추천 결과'} onCompare={()=>openComparison(selectedArea)} onOpenMap={()=>openAreaMap(selectedArea)}/>:!result?<><h1>어떤 창업을 준비하고 계신가요?</h1>
+        <div className="analysis-input-tabs" role="tablist" aria-label="상권 분석 입력 방식">
+          <button id="natural-tab" type="button" role="tab" aria-selected={inputMode==='natural'} aria-controls="analysis-input-panel" tabIndex={inputMode==='natural'?0:-1} onKeyDown={event=>{if(event.key==='ArrowRight'||event.key==='ArrowLeft'){event.preventDefault();setInputMode('structured');document.getElementById('structured-tab')?.focus();}}} onClick={()=>setInputMode('natural')}>자연어 입력</button>
+          <button id="structured-tab" type="button" role="tab" aria-selected={inputMode==='structured'} aria-controls="analysis-input-panel" tabIndex={inputMode==='structured'?0:-1} onKeyDown={event=>{if(event.key==='ArrowRight'||event.key==='ArrowLeft'){event.preventDefault();setInputMode('natural');document.getElementById('natural-tab')?.focus();}}} onClick={()=>setInputMode('structured')}>조건 선택</button>
+        </div>
+        <p className="source-note">이름·연락처·상세 주소·계좌번호 등 개인정보는 입력하지 마세요. 업종과 희망 지역만 입력해 주세요.</p>
+        <div id="analysis-input-panel" className="analysis-input-panel" role="tabpanel" aria-labelledby={inputMode==='natural'?'natural-tab':'structured-tab'}>
+          {inputMode==='structured'?<AnalysisConditions value={structuredConditions} onChange={setStructuredConditions} busy={loading} onSubmit={(event,value)=>analyze(event,false,null,value)}/>:<>        <form className="panel input-panel" onSubmit={analyze}><label className="label" htmlFor="prompt">창업 조건</label>
           <textarea id="prompt" required maxLength={2000} value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder="자유롭게 이야기해 보세요!"/>
-          <div className="assist-row"><span className="assist">입력하신 창업 조건을 AI가 한 번에 분석해요</span><button className="primary" disabled={loading} type="submit">{loading?'분석 중…':'AI 상권 분석하기'}</button></div>
+          <div className="assist-row"><button className="primary" type="submit">AI 상권 분석하기</button></div>
         </form><section className="examples"><p className="examples-title">이렇게 물어볼 수 있어요</p><div className="chips">{examples.map(example=><button className="chip" type="button" key={example} onClick={()=>setPrompt(example)}>{example}</button>)}</div></section>
-        <section className="panel conditions"><div className="section-head"><h2>AI가 분석할 조건</h2><span>분석 후 조건을 수정할 수 있어요</span></div><div className="condition-list">
-          {[['업종',conditions.industry||'입력 후 분석'],['희망 지역',conditions.region],['경쟁 선호',conditions.competition==='low'?'경쟁 낮은 곳 선호':'보통'],['안정성',conditions.stability==='important'?'중요':'보통'],['성장성',conditions.growth==='important'?'중요':'보통']].map(([label,value],i)=><div className={'condition '+(i===2||i===3?'accent':'')} key={label}><span>{label}</span><div className="value-wrap"><span className="value">{value}</span><span className="chevron" aria-hidden="true"/></div></div>)}
-        </div></section></>:
+        </>}
+        </div></>:
       <section className="result-page" id="results">
         <button className="back-link" onClick={()=>{setResult(null);setError('');}}>← 조건 다시 입력</button>
         <h1>추천 창업 상권</h1>
-        <div className="chips result-filters"><span className="tag">업종 · {result.matchedIndustry||conditions.industry}</span><span className="tag">지역 · {result.resolvedRegion||conditions.region}</span><span className="tag blue">기간 · 최근 {conditions.months}개월</span></div>
-        <div className="results-grid"><div className="ranked">{result.results.length?result.results.map((area,index)=><article className="panel result-card" key={area.id}>
-          <div className="card-head"><span className="rank">{index+1}위</span><div className="area"><h2>{area.name}</h2><span>부산광역시 {area.name} · 행정동 기준</span></div><div className="total-score">{area.score==null?<span className="no-score">데이터 부족</span>:area.score}<small>{area.score==null?'':' 점'}</small></div></div>
-          <div className="card-badges"><span className="verdict">{area.verdict}</span><span>행정동 점포 비교</span><span>동일 업종 {shown(area.metrics.industryStores)}곳</span></div>
+        <div className="chips result-filters"><span className="tag">업종 · {result.matchedIndustry||conditions.industry}</span><span className="tag">지역 · {result.resolvedRegion||conditions.region}</span></div>
+        {result.regionAttribution&&<a className="source-note" href={result.regionAttribution.url} target="_blank" rel="noreferrer">{result.regionAttribution.label}</a>}
+        <div className="results-grid"><div className="ranked">{result.results.length?result.results.map((area,index)=><article className="panel result-card" key={area.id} onClick={event=>{
+          if (!event.target.closest('a,button,summary')&&!window.getSelection()?.toString()) window.location.hash=`area-${area.id}`;
+        }}>
+          <div className="card-head"><span className="rank">{area.score==null?'후보':`${index+1}위`}</span><div className="area"><h2>{area.name}</h2><span>부산광역시 {area.name} · 행정동 기준</span></div><div className="total-score">{area.score==null?<span className="no-score">상대평가 불가</span>:area.score}<small>{area.score==null?'':' 점'}</small></div></div>
+          <div className="card-badges"><span className="verdict">{area.verdict}</span></div>
           <div className="metric-tiles">
-            <div><span>평균 생존기간</span><strong>{area.metrics.survivalContext==null?'데이터 없음':`${shown(area.metrics.survivalContext)}개월`}</strong><small>{area.metrics.survivalContext==null?'연결 가능한 지표 없음':'같은 구 상권 평균 참고값'}</small></div>
-            <div><span>{area.metrics.eventPeriod?.stale ? '기록된 개업' : '최근 개업'}</span><strong>{shown(area.metrics.openings)}</strong><small>{eventBasis(area,conditions.months)}</small></div>
-            <div><span>{area.metrics.eventPeriod?.stale ? '기록된 폐업' : '최근 폐업'}</span><strong>{shown(area.metrics.closures)}</strong><small>{eventBasis(area,conditions.months)}</small></div>
-            <div><span>동일 업종 점포</span><strong>{shown(area.metrics.industryStores)}</strong><small>전체 {shown(area.metrics.totalStores)}곳</small></div>
+            <div><span>평균 영업기간</span><strong>{operatingMonths(area.historyContext?.averageOperatingMonths)}</strong></div>
+            <div><span>최근 1년 개업</span><strong>{shown(area.historyContext?.periodOpenings)}{area.historyContext?.periodOpenings!=null?'건':''}</strong></div>
+            <div><span>최근 1년 폐업</span><strong>{shown(area.historyContext?.periodClosures)}{area.historyContext?.periodClosures!=null?'건':''}</strong></div>
+            <div><span>동일 업종 점포</span><strong>{shown(area.metrics.industryStores)}{area.metrics.industryStores!=null?'개':''}</strong></div>
           </div>
-          <div className="reason-box"><strong>✦ AI 추천 이유</strong><p>{area.score==null?'비교 가능한 행정동 자료가 부족해 점수를 표시하지 않았습니다.':`행정동의 전체 점포 ${shown(area.metrics.totalStores)}곳과 선택 업종 ${shown(area.metrics.industryStores)}곳을 비교했습니다. 경쟁 적합도 ${shown(area.scores.competition)}점, 상업 활동 비교 ${shown(area.scores.fit)}점을 반영했습니다.`}{area.metrics.survivalContext!=null?` 같은 구의 확인된 상권 평균 생존기간 ${shown(area.metrics.survivalContext)}개월은 참고값입니다.`:''}</p></div>
-          <details className="evidence"><summary>점수와 데이터 근거 보기</summary><div className="score-grid">{Object.entries(scoreLabels).map(([key,label])=><div key={key}>{label}<strong>{shown(area.scores[key])}</strong><small>적용 가중치 {area.effectiveWeights[key]??0}%</small></div>)}</div><p>순증감: {shown(area.metrics.growth)} · 점포 기준월: {area.dataDate||'확인 불가'} · 업종 코드: {Object.values(area.industryEvidence.filter).join(', ')}</p><ul>{area.notes.map(note=><li key={note}>{note}</li>)}</ul></details>
-          <div className="card-actions"><button className="detail-button" type="button" onClick={e=>e.currentTarget.closest('article').querySelector('.evidence').open=true}>상세 보기</button><button type="button" disabled title="검증된 행정동 중심 좌표가 없습니다.">지도에서 보기</button><button type="button" disabled title="보관함 기능은 준비 중입니다.">♧ 관심 상권 저장</button></div>
-        </article>):<div className="panel empty">선택한 지역의 행정동을 공공데이터에서 확인하지 못했습니다. 아래 제공처 오류와 조회 제한을 확인해 주세요. 지역 코드를 직접 입력할 필요는 없습니다.</div>}</div>
-          <aside className="side-column"><div className="panel methodology"><h2>점수는 이렇게 계산했어요</h2><p>첫 번째 후보의 실제 적용 가중치입니다. 누락 지표는 제외하고 다시 계산합니다.</p>{[['fit','지역·업종 적합도'],['competition','경쟁 적합도'],['stability','안정성'],['growth','성장성']].map(([key,label])=>{const weight=result.results[0]?.effectiveWeights[key]??0;return <div className="weight" key={key}><span>{label}<b>{weight}%</b></span><div><i style={{width:`${weight}%`}}/></div></div>;})}<p className="aside-note">현재 적합도는 행정동의 전체 점포 수를 비교한 상업 활동 대리 지표입니다. 임대료·매출·생존율을 추정하지 않습니다.</p></div>
-            <div className="side-tip"><strong>나에게 맞는 상권을 찾아보세요</strong><p>조건을 바꾸면 상위 3개 행정동을 다시 비교합니다.</p></div>
-            <div className="panel revise"><h2>분석 조건 수정</h2>{[['industry','업종'],['region','희망 지역']].map(([key,label])=><label key={key}>{label}<input value={conditions[key]} onChange={e=>edit(key,e.target.value)}/></label>)}<label>분석 기간 (개월)<input type="number" min="1" max="36" value={conditions.months} onChange={e=>edit('months',Number(e.target.value))}/></label><button className="primary" disabled={loading} onClick={e=>analyze(e,true)}>{loading?'재분석 중…':'조건 수정 후 재분석'}</button></div></aside></div>
-        {result.historyContext&&<p className="limitations">{result.historyContext.note}</p>}
-        {result.warnings.length>0&&<div className="warnings" role="status">{result.warnings.map(w=><p key={w}>{w}</p>)}</div>}
-        <p className="source-note">분석 시각: {new Date(result.analyzedAt).toLocaleString('ko-KR')} · 출처: {result.sources.join(', ')}</p>
+          <div className="reason-box"><strong>{area.score==null?'후보 평가':'추천 이유'}</strong>
+            <ul role="list">{recommendationComment(area,{
+              industry:result.matchedIndustry||conditions.industry,
+              region:result.resolvedRegion,
+              rank:index+1,
+              previousArea:result.results[index-1],
+              conditions:result.conditions
+            }).map(line=><li key={line}>{line}</li>)}</ul>
+          </div>
+
+          <div className="card-actions"><a className="detail-button" id={`area-link-${area.id}`} href={`#area-${area.id}`}>상세 보기</a><a className="map-link" href="#map" onClick={event=>{event.preventDefault();openAreaMap(area);}}>지도에서 보기</a><SaveAreaButton area={area} industry={result.matchedIndustry||conditions.industry}/></div>
+        </article>):<div className="panel empty">선택한 지역의 점포 데이터를 DB에서 확인하지 못했습니다. 구 또는 행정동 이름으로 다시 입력해 주세요.</div>}</div>
+          <aside className="side-column"><div className="panel methodology"><h2>점수 항목과 가중치</h2>{Object.entries(scoreLabels).map(([key,label])=>{const weight=result.results[0]?.effectiveWeights[key]??0;return <div className="weight" key={key}><span>{label}<b>{weight}%</b></span><div><i style={{width:`${weight}%`}}/></div></div>;})}</div>
+            <div className="panel revise"><h2>분석 조건 수정</h2>{[['industry','업종'],['region','희망 지역']].map(([key,label])=><label key={key}>{label}<input value={key==='industry'&&/^[A-Za-z][0-9]{5}$/.test(conditions[key])?result.matchedIndustry:conditions[key]} onChange={e=>edit(key,e.target.value)}/></label>)}<button className="primary" onClick={e=>analyze(e,true)}>조건 수정 후 재분석</button></div></aside></div>
       </section>}
-      {error&&<div className="error" role="alert"><p>{error}</p>{diagnostic&&<p>서비스: {diagnostic.service} / {diagnostic.operation} · HTTP {diagnostic.status??'연결 실패'} · {diagnostic.format}</p>}{choices.length>0&&<div className="chips">{choices.map(choice=><button type="button" className="chip" key={choice} onClick={()=>{setPrompt(p=>`${p.trim()} ${choice}`);setError('');setChoices([]);}}>{choice}</button>)}</div>}</div>}
-      <span className="sr-only" role="status">{loading?'상권 데이터를 분석하고 있습니다.':''}</span>
+      {error&&<div ref={errorNotice} className="error" role="alert"><p>{error}</p>{choices.length>0&&<div className="chips">{choices.map(choice=><button type="button" className="chip" key={choice} onClick={event=>analyze(event,false,{[choiceType==='industry'?'industryChoice':'regionChoice']:choice})}>{choice}</button>)}</div>}</div>}
     </main>
+    <footer className="site-footer" aria-label="데이터 출처">
+      <p><strong>데이터 출처</strong> 소상공인시장진흥공단 상가(상권)정보 · 부산광역시 상권 점포이력정보서비스 (<a href="https://www.data.go.kr" target="_blank" rel="noreferrer">공공데이터포털</a>)</p>
+      <p>행정동 경계: 통계청 SGIS(공공누리 제1유형), 가공 <a href="https://github.com/vuski/admdongkor" target="_blank" rel="noreferrer">vuski/admdongkor</a>(CC BY 4.0) · 지도: 카카오맵 · 조건 추출: OpenAI</p>
+    </footer>
+    <dialog ref={loadingDialog} className="analysis-dialog" aria-labelledby="analysis-dialog-title" aria-describedby="analysis-dialog-description analysis-dialog-note" onCancel={event=>event.preventDefault()}>
+      <div className="analysis-dots" aria-hidden="true"><span/><span/><span/></div>
+      <h2 id="analysis-dialog-title">분석 중입니다.</h2>
+      <p id="analysis-dialog-description">입력하신 창업 조건에 맞춰<br/>상권 데이터를 꼼꼼히 분석하고 있어요.</p>
+      <p id="analysis-dialog-note">잠시만 기다려 주세요.</p>
+    </dialog>
   </>;
 }
