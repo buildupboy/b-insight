@@ -477,6 +477,11 @@ textarea::placeholder { color: #646566; opacity: 1; }
 .business-map-controls button:disabled { opacity:.5; cursor:default; }
 .business-map-footer { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; color:#697382; font-size:11px; }
 .business-map-footer a { color:inherit; }
+.site-footer { width:min(1312px,calc(100% - 48px)); margin:0 auto; padding:16px 0 28px; border-top:1px solid #e3e7ec; color:#697382; font-size:12px; line-height:1.7; }
+.site-footer p { margin:0; }
+.site-footer strong { margin-right:6px; color:#475569; }
+.site-footer a { color:inherit; }
+@media(max-width:520px) { .site-footer { width:calc(100% - 32px); } }
 .business-map-region-list { display:flex; flex-wrap:wrap; gap:8px; }
 .business-map-region-list button { display:flex; align-items:center; gap:12px; padding:9px 12px; border:1px solid #e0e4e9; border-radius:6px; background:#fff; color:#596675; font-size:12px; cursor:pointer; }
 .business-map-region-list button[aria-pressed="true"] { border-color:#2454d6; color:#2454d6; background:#edf2ff; }

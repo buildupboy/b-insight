@@ -175,6 +175,10 @@ export default function App() {
       </section>}
       {error&&<div ref={errorNotice} className="error" role="alert"><p>{error}</p>{choices.length>0&&<div className="chips">{choices.map(choice=><button type="button" className="chip" key={choice} onClick={event=>analyze(event,false,{[choiceType==='industry'?'industryChoice':'regionChoice']:choice})}>{choice}</button>)}</div>}</div>}
     </main>
+    <footer className="site-footer" aria-label="데이터 출처">
+      <p><strong>데이터 출처</strong> 소상공인시장진흥공단 상가(상권)정보 · 부산광역시 상권 점포이력정보서비스 (<a href="https://www.data.go.kr" target="_blank" rel="noreferrer">공공데이터포털</a>)</p>
+      <p>행정동 경계: 통계청 SGIS(공공누리 제1유형), 가공 <a href="https://github.com/vuski/admdongkor" target="_blank" rel="noreferrer">vuski/admdongkor</a>(CC BY 4.0) · 지도: 카카오맵 · 조건 추출: OpenAI</p>
+    </footer>
     <dialog ref={loadingDialog} className="analysis-dialog" aria-labelledby="analysis-dialog-title" aria-describedby="analysis-dialog-description analysis-dialog-note" onCancel={event=>event.preventDefault()}>
       <div className="analysis-dots" aria-hidden="true"><span/><span/><span/></div>
       <h2 id="analysis-dialog-title">분석 중입니다.</h2>
