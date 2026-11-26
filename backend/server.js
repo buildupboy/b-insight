@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseConditions, validate, InputError, ConditionServiceError } from './conditions.js';
+import { parseConditions, validate, assertPrivateInput, InputError, ConditionServiceError } from './conditions.js';
 import { resolveRegion } from './region-lookup.js';
 import { resolveDbIndustry, resolveIndustryIntent, industryPromptContext } from './industry-match.js';
 import { makeCandidate, rank } from './score.js';
@@ -100,6 +100,7 @@ async function readBody(request) {
   try { return JSON.parse(value); } catch { throw new InputError('요청 형식이 올바르지 않습니다.'); }
 }
 export async function analyze(input, repository = { loadRecommendationData, loadIndustryCounts, loadAreaContexts }, resultLimit=3) {
+  assertPrivateInput(input);
   const timing = { conditionExtractionMs:null, dbQueryMs:null, historyQueryMs:null, changeQueryMs:null, scoringMs:null, serverTotalMs:null };
   let conditions;
   let step = performance.now(), stage = 'database';
@@ -273,6 +274,7 @@ export const server = createServer(async (request, response) => {
         choices:error.choices ?? [],choiceType:error.choiceType ?? null});}
     }
     if (requested === '/api/analyze') {
+      response.setHeader('Cache-Control','no-store');
       if (request.method !== 'POST') return json(response, 405, { error:'POST 요청이 필요합니다.' });
       const started = performance.now();
       try {

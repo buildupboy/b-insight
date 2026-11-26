@@ -8,6 +8,7 @@ import {useAuth,UserMenu} from './AuthContext.jsx';
 import SaveAreaButton from './SaveAreaButton.jsx';
 import SavedAreas from './SavedAreas.jsx';
 import AnalysisConditions from './AnalysisConditions.jsx';
+import {hasSensitiveInput,privacyMessage} from '../../shared/input-privacy.mjs';
 
 const examples=['부산진구에서 카페를 열고 싶어요. 경쟁이 낮은 곳을 추천해줘.','해운대구에서 미용실 창업을 고민 중이야.'];
 const operatingMonths=value=>value==null?'데이터 부족':`${Number(value).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1})}개월`;
@@ -108,12 +109,14 @@ export default function App() {
   async function analyze(event,revise=false,selection=null,structured=null) {
     event?.preventDefault();
     if (analysisLock.current||loading||(!structured&&!revise&&!prompt.trim())) return;
+    const payload=structured?{conditions:structured}:revise?{conditions}:{prompt,...(selection&&pendingConditions?{conditions:pendingConditions}:{}),...(selection?{...selectionRef.current,...selection}:{})};
+    if(hasSensitiveInput(payload)){setError(privacyMessage);return;}
     analysisLock.current=true;
     selectionRef.current=selection?{...selectionRef.current,...selection}:{};
     if (!selection) setPendingConditions(null);
     setLoading(true);setError('');setChoices([]);setChoiceType(null);
     try {
-      const response=await fetch('/api/analyze',{method:'POST',signal:AbortSignal.timeout(75000),headers:{'Content-Type':'application/json'},body:JSON.stringify(structured?{conditions:structured}:revise?{conditions}:{prompt,...(selection&&pendingConditions?{conditions:pendingConditions}:{}),...selectionRef.current})});
+      const response=await fetch('/api/analyze',{method:'POST',signal:AbortSignal.timeout(75000),headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
       if (!response.headers.get('Content-Type')?.includes('application/json')) throw new Error('분석 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
       const data=await response.json();
       if (!response.ok) {setChoices(data.choices||[]);setChoiceType(data.choiceType||null);setPendingConditions(data.conditions||null);throw new Error(data.error||'분석에 실패했습니다.');}
@@ -135,6 +138,7 @@ export default function App() {
           <button id="natural-tab" type="button" role="tab" aria-selected={inputMode==='natural'} aria-controls="analysis-input-panel" tabIndex={inputMode==='natural'?0:-1} onKeyDown={event=>{if(event.key==='ArrowRight'||event.key==='ArrowLeft'){event.preventDefault();setInputMode('structured');document.getElementById('structured-tab')?.focus();}}} onClick={()=>setInputMode('natural')}>자연어 입력</button>
           <button id="structured-tab" type="button" role="tab" aria-selected={inputMode==='structured'} aria-controls="analysis-input-panel" tabIndex={inputMode==='structured'?0:-1} onKeyDown={event=>{if(event.key==='ArrowRight'||event.key==='ArrowLeft'){event.preventDefault();setInputMode('natural');document.getElementById('natural-tab')?.focus();}}} onClick={()=>setInputMode('structured')}>조건 선택</button>
         </div>
+        <p className="source-note">이름·연락처·상세 주소·계좌번호 등 개인정보는 입력하지 마세요. 업종과 희망 지역만 입력해 주세요.</p>
         <div id="analysis-input-panel" className="analysis-input-panel" role="tabpanel" aria-labelledby={inputMode==='natural'?'natural-tab':'structured-tab'}>
           {inputMode==='structured'?<AnalysisConditions value={structuredConditions} onChange={setStructuredConditions} busy={loading} onSubmit={(event,value)=>analyze(event,false,null,value)}/>:<>        <form className="panel input-panel" onSubmit={analyze}><label className="label" htmlFor="prompt">창업 조건</label>
           <textarea id="prompt" required maxLength={2000} value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder="자유롭게 이야기해 보세요!"/>

@@ -6,9 +6,14 @@ const schema = { type: 'object', additionalProperties: false, required: Object.k
   growth: { type: 'string', enum: ['normal', 'important'] }, populationRequested: { type: 'boolean' },
   populationTypes: { type: 'array', items: { type: 'string', enum: populationTypes } }, budget: { type: ['number', 'null'] }
 } };
+import {hasSensitiveInput, privacyMessage} from '../shared/input-privacy.mjs';
 export class InputError extends Error { constructor(message, choices = []) { super(message); this.choices = choices; } }
+export function assertPrivateInput(input) {
+  if (hasSensitiveInput(input)) throw new InputError(privacyMessage);
+}
 export class ConditionServiceError extends Error { constructor(message) { super(message); this.name = 'ConditionServiceError'; } }
 export function validate(input,{allowMissingIndustry=false}={}) {
+  assertPrivateInput(input);
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new InputError('분석 조건을 확인해 주세요.');
   const c = { ...defaults, ...input };
   for (const field of ['industry', 'region']) if (typeof c[field] !== 'string' || c[field].length > 100) throw new InputError(`${field} 조건이 올바르지 않습니다.`);
@@ -24,6 +29,7 @@ export function validate(input,{allowMissingIndustry=false}={}) {
   return Object.fromEntries(Object.keys(defaults).map(k => [k, c[k]]));
 }
 export async function parseConditions(prompt, {industries=[],aliases=[]}={}) {
+  assertPrivateInput(prompt);
   if (!process.env.OPENAI_API_KEY) throw new ConditionServiceError('AI 조건 추출 설정을 확인해 주세요.');
   let response;
   try {
@@ -33,7 +39,7 @@ export async function parseConditions(prompt, {industries=[],aliases=[]}={}) {
     response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST', signal: AbortSignal.timeout(20000),
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
-      body: JSON.stringify({ model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      body: JSON.stringify({ model: process.env.OPENAI_MODEL || 'gpt-4o-mini', store:false,
         messages: [{ role: 'system', content: '부산 창업 희망 조건만 추출한다. 서면·센텀시티 같은 상권명과 역 이름도 지역 표현이며 원문 그대로 region에 넣는다. 지역명은 사용자의 표현 그대로 쓰고 행정동 범위를 추측하지 않는다. 업종은 제공된 허용 목록과 별칭 지침을 따르고, 목록이 없으면 사용자 표현 그대로 쓴다. 존재하지 않거나 불확실해 보이는 동 이름도 지역 표현이 있으면 원문대로 region에 넣는다. 지역이 없거나 상관없으면 부산 전체, 업종이 없으면 빈 문자열, 예산 언급이 없으면 budget=null. 경쟁이 적거나 같은 업종이 적은 곳을 원할 때만 competition=low, 경쟁을 신경 쓰지 않는다고 명시한 경우만 any, 그 외에는 normal. 안정적인 곳, 낮은 폐업 위험, 오래 영업할 곳을 원할 때만 stability=important, 그 외에는 normal. 성장하는 상권이나 확대되는 상권을 원할 때만 growth=important, 그 외에는 normal. 인구 관련 요청이 있으면 populationRequested=true이고 populationTypes에 요청한 종류를 넣는다: 인구밀도는 density, 거주인구는 resident, 생활인구는 living, 유동인구는 floating, 단순히 사람이 많은 곳이나 막연한 인구는 unspecified. 여러 종류를 말하면 모두 넣고 중복은 넣지 않는다. 인구 요청이 없으면 populationRequested=false, populationTypes=[]. 점포 밀집도는 인구가 아니므로 인구 요청으로 분류하지 않는다. 사용자가 말하지 않은 선호를 추가하지 않는다. 수치나 추천 근거를 만들지 않는다.'+industryInstructions }, { role: 'user', content: prompt }],
         response_format: { type: 'json_schema', json_schema: { name: 'business_conditions', strict: true, schema } } })
     });
@@ -41,6 +47,7 @@ export async function parseConditions(prompt, {industries=[],aliases=[]}={}) {
   if (!response.ok) throw new ConditionServiceError(`AI 조건 분석 실패 (${response.status})`);
   try {
     const extracted = JSON.parse((await response.json()).choices?.[0]?.message?.content);
+    assertPrivateInput(extracted);
     let conditions;
     try { conditions = validate(extracted,{allowMissingIndustry:true}); }
     catch (error) {
