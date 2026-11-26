@@ -27,6 +27,38 @@ const repository = {
 };
 const conditions = {industry:'카페',region:'부산진구',competition:'low',stability:'important',growth:'normal',budget:null};
 
+test('실제 허용 목록을 LLM에 전달하고 별칭을 조건·조회 코드로 정규화한다',async()=>{
+  const originalFetch=globalThis.fetch;
+  const industries=Object.values(verifiedFoodFamilies).flat().map(([industry_code,industry_name])=>({industry_code,industry_name}));
+  let expectedCode;
+  const fixture={...repository,
+    loadRecommendationData:async()=>({coverage:{total:450},areas,industries}),
+    loadIndustryCounts:async(codes,selected)=>{assert.deepEqual(codes,[expectedCode]);return selected.map(row=>({...row,selected:10}));}
+  };
+  globalThis.fetch=async(_url,options)=>{
+    const request=JSON.parse(options.body);
+    assert(request.messages[0].content.includes(JSON.stringify(industries)));
+    assert(request.messages[0].content.includes('스시집'));
+    return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify({
+      ...conditions,industry:'알 수 없는 업종',budget:5000,populationRequested:true,populationTypes:['floating']
+    })}}]}));
+  };
+  try{
+    for(const [term,code,label] of [['스시집','I20301','일식 회/초밥'],['짬뽕집','I20201','중국집']]){
+      expectedCode=code;
+      const result=await analyze({prompt:`부산진구에서 ${term}을 열고 싶어`},fixture);
+      assert.equal(result.conditions.industry,label);
+      assert.equal(result.matchedIndustry,label);
+      assert.deepEqual(result.industryCode,{indsSclsCd:code});
+      assert.equal(result.conditions.budget,5000);
+      assert.deepEqual(result.conditions.populationTypes,['floating']);
+      const repeated=await analyze({conditions:result.conditions},fixture);
+      assert.deepEqual(repeated.industryCode,result.industryCode);
+    }
+    await assert.rejects(()=>analyze({prompt:'알 수 없는 업종을 열고 싶어'},fixture),/검증된 DB 업종/);
+  }finally{globalThis.fetch=originalFetch;}
+});
+
 test('자연어 조건은 지역·업종·선호를 유지하고 기간 기본값 없이 추천한다', async () => {
   const originalFetch=globalThis.fetch;
   globalThis.fetch=async (_url, options) => {
@@ -155,7 +187,7 @@ test('AI가 업종을 누락하면 원문의 검증된 동의어를 DB 코드로
   })}}]}));
   try {
     const result=await analyze({prompt:'부산진구에서 커피 전문점을 열고 싶어'},repository);
-    assert.equal(result.conditions.industry,'커피전문점');
+    assert.equal(result.conditions.industry,'카페');
     assert.deepEqual(result.industryCode,{indsSclsCd:'I21201'});
     assert.equal(result.matchedIndustry,'카페');
   } finally {globalThis.fetch=originalFetch;}

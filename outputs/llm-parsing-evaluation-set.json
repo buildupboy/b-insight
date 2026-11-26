@@ -1,0 +1,435 @@
+[
+  {
+    "id": "AI-001",
+    "prompt": "카페를 창업하고 싶어요.",
+    "expected": {
+      "industry": "카페",
+      "region": "부산 전체",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-002",
+    "prompt": "부산진구에서 카페를 열고 싶어요.",
+    "expected": {
+      "industry": "카페",
+      "region": "부산진구",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-003",
+    "prompt": "해운대구에서 미용실을 창업하려고 해요.",
+    "expected": {
+      "industry": "미용실",
+      "region": "해운대구",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-004",
+    "prompt": "사하구에서 편의점을 열고 싶어요.",
+    "expected": {
+      "industry": "편의점",
+      "region": "사하구",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-005",
+    "prompt": "동래구에서 네일숍을 창업하고 싶어요.",
+    "expected": {
+      "industry": "네일숍",
+      "region": "동래구",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-006",
+    "prompt": "부전2동에서 카페를 열고 싶어요.",
+    "expected": {
+      "industry": "카페",
+      "region": "부전2동",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-007",
+    "prompt": "하단1동에서 분식집을 창업하고 싶어요.",
+    "expected": {
+      "industry": "분식집",
+      "region": "하단1동",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-008",
+    "prompt": "서면에서 카페를 창업하고 싶어요.",
+    "expected": {
+      "industry": "카페",
+      "region": "서면",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-009",
+    "prompt": "센텀시티에서 빵집을 열고 싶어요.",
+    "expected": {
+      "industry": "빵집",
+      "region": "센텀시티",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-010",
+    "prompt": "부산역 근처에서 커피숍을 열고 싶어요.",
+    "expected": {
+      "industry": "커피숍",
+      "region": "부산역",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-011",
+    "prompt": "카페를 열 건데 경쟁이 적은 곳을 추천해줘.",
+    "expected": {
+      "industry": "카페",
+      "region": "부산 전체",
+      "competition": "low",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-012",
+    "prompt": "부산진구에서 카페를 열고 싶고 같은 업종이 적은 곳을 원해요.",
+    "expected": {
+      "industry": "카페",
+      "region": "부산진구",
+      "competition": "low",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-013",
+    "prompt": "해운대구에서 미용실을 열고 싶어요. 경쟁은 신경 쓰지 않아요.",
+    "expected": {
+      "industry": "미용실",
+      "region": "해운대구",
+      "competition": "any",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-014",
+    "prompt": "사하구에서 카페를 열고 싶고 경쟁 강도는 보통으로 해주세요.",
+    "expected": {
+      "industry": "카페",
+      "region": "사하구",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-015",
+    "prompt": "카페를 창업하고 싶고 안정적인 곳을 원해요.",
+    "expected": {
+      "industry": "카페",
+      "region": "부산 전체",
+      "competition": "normal",
+      "stability": "important",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-016",
+    "prompt": "동래구에서 편의점을 열고 오래 영업할 수 있는 곳을 원해요.",
+    "expected": {
+      "industry": "편의점",
+      "region": "동래구",
+      "competition": "normal",
+      "stability": "important",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-017",
+    "prompt": "카페 창업을 준비 중이고 성장하는 상권을 원해요.",
+    "expected": {
+      "industry": "카페",
+      "region": "부산 전체",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "important",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-018",
+    "prompt": "수영구에서 네일숍을 열고 확대되는 상권을 원해요.",
+    "expected": {
+      "industry": "네일숍",
+      "region": "수영구",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "important",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-019",
+    "prompt": "부산진구에서 카페를 열고 싶어요. 경쟁이 적고 안정적인 곳을 원해요.",
+    "expected": {
+      "industry": "카페",
+      "region": "부산진구",
+      "competition": "low",
+      "stability": "important",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-020",
+    "prompt": "해운대구에서 미용실을 창업할 거예요. 안정적이고 성장하는 상권을 원해요.",
+    "expected": {
+      "industry": "미용실",
+      "region": "해운대구",
+      "competition": "normal",
+      "stability": "important",
+      "growth": "important",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-021",
+    "prompt": "사하구에서 카페를 열고 싶어요. 경쟁이 적고 안정적이며 성장하는 상권을 원해요.",
+    "expected": {
+      "industry": "카페",
+      "region": "사하구",
+      "competition": "low",
+      "stability": "important",
+      "growth": "important",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-022",
+    "prompt": "지역 상관없이 카페를 열고 싶고 경쟁은 신경 쓰지 않아요.",
+    "expected": {
+      "industry": "카페",
+      "region": "부산 전체",
+      "competition": "any",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-023",
+    "prompt": "카페를 열고 싶어요. 인구밀도가 높은 곳을 원해요.",
+    "expected": {
+      "industry": "카페",
+      "region": "부산 전체",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": true,
+      "populationTypes": [
+        "density"
+      ],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-024",
+    "prompt": "남구에서 카페를 열고 싶어요. 거주인구가 많은 곳을 원해요.",
+    "expected": {
+      "industry": "카페",
+      "region": "남구",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": true,
+      "populationTypes": [
+        "resident"
+      ],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-025",
+    "prompt": "연제구에서 편의점을 열고 싶어요. 생활인구가 많은 곳을 원해요.",
+    "expected": {
+      "industry": "편의점",
+      "region": "연제구",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": true,
+      "populationTypes": [
+        "living"
+      ],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-026",
+    "prompt": "서면에서 카페를 열고 싶어요. 유동인구가 많은 곳을 원해요.",
+    "expected": {
+      "industry": "카페",
+      "region": "서면",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": true,
+      "populationTypes": [
+        "floating"
+      ],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-027",
+    "prompt": "카페를 열고 싶고 거주인구와 유동인구가 모두 많은 곳을 원해요.",
+    "expected": {
+      "industry": "카페",
+      "region": "부산 전체",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": true,
+      "populationTypes": [
+        "resident",
+        "floating"
+      ],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-028",
+    "prompt": "카페를 열고 싶고 사람이 많은 곳을 원해요.",
+    "expected": {
+      "industry": "카페",
+      "region": "부산 전체",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": true,
+      "populationTypes": [
+        "unspecified"
+      ],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-029",
+    "prompt": "카페를 열고 싶고 점포 밀집도가 높은 곳을 원해요.",
+    "expected": {
+      "industry": "카페",
+      "region": "부산 전체",
+      "competition": "normal",
+      "stability": "normal",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  },
+  {
+    "id": "AI-030",
+    "prompt": "안정적이고 경쟁이 적은 곳에서 창업하고 싶어요.",
+    "expected": {
+      "industry": "",
+      "region": "부산 전체",
+      "competition": "low",
+      "stability": "important",
+      "growth": "normal",
+      "populationRequested": false,
+      "populationTypes": [],
+      "budget": null
+    }
+  }
+]

@@ -4,6 +4,27 @@ import { resolveDbRegion, RegionMatchError } from './region-match.js';
 import { resolveDbIndustry, resolveIndustryIntent, verifiedFoodFamilies, IndustryMatchError } from './industry-match.js';
 import { makeCandidate, rank } from './score.js';
 
+test('식당 별칭은 검증된 코드로 연결하고 모호한 고깃집은 재질문한다',()=>{
+  for(const [terms,code] of [
+    [['스시집','초밥집','스시 전문점'],'I20301'],
+    [['중국집','중식당','짜장면집','짬뽕집'],'I20201'],
+    [['치킨집','통닭집'],'I21006'],
+    [['커피집','커피샵'],'I21201'],
+    [['삼겹살집'],'I20107'],[['한우집'],'I20108']
+  ]) for(const term of terms){
+    assert.deepEqual(resolveDbIndustry(term,industries).codes,[code]);
+    assert.deepEqual(resolveIndustryIntent('',`부산진구에서 ${term}을 열고 싶어`,industries).match.codes,[code]);
+  }
+  assert.deepEqual(resolveIndustryIntent('기타 일식 음식점','스시집을 열고 싶어',industries).match.codes,['I20301']);
+  assert.throws(()=>resolveIndustryIntent('돼지고기 구이/찜','고깃집을 열고 싶어',industries),
+    error=>error instanceof IndustryMatchError&&error.choices.includes('소고기 구이/찜'));
+  assert.throws(()=>resolveIndustryIntent('I20301','스시집이나 중국집 중 고민이야',industries),IndustryMatchError);
+  assert.throws(()=>resolveIndustryIntent('I20301','스시집이나, 중국집 중 고민이야',industries),IndustryMatchError);
+  assert.throws(()=>resolveDbIndustry('스시집',industries.filter(row=>row.industry_code!=='I20301')),IndustryMatchError);
+  assert.throws(()=>resolveDbIndustry('스시집',[{industry_code:'I20301',industry_name:'변경된 분류'}]),IndustryMatchError);
+  assert.throws(()=>resolveDbIndustry('I99999',industries),IndustryMatchError);
+});
+
 const areas = [
   {district_name:'사하구',dong_name:'하단1동',total:854},
   {district_name:'사하구',dong_name:'하단2동',total:1586},
